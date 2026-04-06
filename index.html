@@ -872,31 +872,41 @@ function getData(key, fallback) {
   catch { return fallback; }
 }
 
+// Firebase key encoding: dots aren't allowed in Firebase keys
+// Use ~ as escape char (safe in Firebase, won't collide with our keys)
+function toFirebaseKey(k) { return k.replace(/\./g, '~'); }
+function fromFirebaseKey(k) { return k.replace(/~/g, '.'); }
+
 // Write to both localStorage (instant) and Firebase (sync)
+let _skipNextSync = false;
 function setData(key, val) {
   localStorage.setItem(key, JSON.stringify(val));
-  db.ref('data/' + key.replace(/\./g, '_')).set(val);
+  _skipNextSync = true;
+  db.ref('data/' + toFirebaseKey(key)).set(val);
 }
 
-// On first load, pull everything from Firebase to sync this device
+// Real-time sync: listen for ALL changes from Firebase
 let firebaseLoaded = false;
-db.ref('data').once('value').then(snap => {
+db.ref('data').on('value', snap => {
+  if (_skipNextSync) { _skipNextSync = false; return; }
   const allData = snap.val();
   if (allData) {
+    let changed = false;
     Object.keys(allData).forEach(k => {
-      const localKey = k.replace(/_/g, '.');
-      // Only overwrite if Firebase has newer/different data
+      const localKey = fromFirebaseKey(k);
       const fbVal = JSON.stringify(allData[k]);
       const localVal = localStorage.getItem(localKey);
       if (fbVal !== localVal) {
         localStorage.setItem(localKey, fbVal);
+        changed = true;
       }
     });
-    // Re-render everything with synced data
-    firebaseLoaded = true;
-    reloadAllData();
+    if (changed || !firebaseLoaded) {
+      firebaseLoaded = true;
+      reloadAllData();
+    }
   }
-}).catch(() => { /* offline — localStorage still works */ });
+});
 
 function reloadAllData() {
   // Reload all dynamic data from localStorage (now synced with Firebase)
