@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cc-v1';
+const CACHE_NAME = 'cc-v2-20260407';
 const ASSETS = [
   './index.html',
   './manifest.json',
@@ -23,11 +23,24 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Network-first for HTML (always get fresh), cache-first for assets
-  if (e.request.url.includes('firebase') || e.request.url.includes('googleapis')) {
-    return; // Don't cache Firebase requests
+  // Don't cache Firebase or Google API requests
+  if (e.request.url.includes('firebase') || e.request.url.includes('googleapis') || e.request.url.includes('gstatic')) {
+    return;
   }
+
+  // Stale-while-revalidate: serve from cache immediately, update cache in background
   e.respondWith(
-    fetch(e.request).catch(() => caches.match(e.request))
+    caches.open(CACHE_NAME).then(cache =>
+      cache.match(e.request).then(cached => {
+        const fetchPromise = fetch(e.request).then(response => {
+          if (response && response.status === 200) {
+            cache.put(e.request, response.clone());
+          }
+          return response;
+        }).catch(() => cached);
+
+        return cached || fetchPromise;
+      })
+    )
   );
 });
