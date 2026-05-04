@@ -737,6 +737,46 @@ function isItemActiveOnDate(item, dateStr) {
 function getItemWeight(item) { return item.weight || 3; }
 function isAnytimeItem(item) { return item.repeat.type === 'anytime_weekly' || item.repeat.type === 'anytime_monthly'; }
 
+function getAnytimePeriod(item, dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  if (item.repeat.type === 'anytime_weekly') {
+    const dow = d.getDay();
+    const mondayOffset = dow === 0 ? -6 : 1 - dow;
+    const monday = new Date(d); monday.setDate(d.getDate() + mondayOffset);
+    const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+    return { start: monday.toISOString().split('T')[0], end: sunday.toISOString().split('T')[0] };
+  }
+  if (item.repeat.type === 'anytime_monthly') {
+    const year = d.getFullYear(), month = d.getMonth();
+    return {
+      start: new Date(year, month, 1).toISOString().split('T')[0],
+      end: new Date(year, month + 1, 0).toISOString().split('T')[0]
+    };
+  }
+  return null;
+}
+
+function findAnytimeCompletionDate(item, period) {
+  const start = new Date(period.start + 'T12:00:00');
+  const end = new Date(period.end + 'T12:00:00');
+  const now = new Date(TODAY + 'T12:00:00');
+  const limit = end < now ? end : now;
+  for (let d = new Date(start); d <= limit; d.setDate(d.getDate() + 1)) {
+    const ds = d.toISOString().split('T')[0];
+    if (wtdChecks[ds] && wtdChecks[ds][item.id] === true) return ds;
+  }
+  return null;
+}
+
+function shouldAnytimeCountForScoring(item, dateStr) {
+  const period = getAnytimePeriod(item, dateStr);
+  if (!period) return false;
+  const completionDate = findAnytimeCompletionDate(item, period);
+  if (completionDate === dateStr) return true;
+  if (dateStr === period.end && !completionDate) return true;
+  return false;
+}
+
 function getRepeatLabel(r) {
   if (r.type === 'daily') return 'Every day';
   if (r.type === 'weekdays') return 'Mon–Fri';
@@ -769,13 +809,39 @@ function getTodayWtdItems() {
 }
 
 function getWtdScore() {
-  const items = [...getTodayWtdItems(), ...SYNTHETIC_ITEMS];
+  const allItems = [...getTodayWtdItems(), ...SYNTHETIC_ITEMS];
   const checks = wtdChecks[TODAY] || {};
-  const scoring = items.filter(i => checks[i.id] !== 'na');
+  // Filter for scoring: exclude N/A, and anytime items that shouldn't count today
+  const scoring = allItems.filter(i => {
+    if (checks[i.id] === 'na') return false;
+    if (isAnytimeItem(i)) return shouldAnytimeCountForScoring(i, TODAY);
+    return true;
+  });
+  // If all items are non-scoring anytime, fall back to regular items only
+  if (scoring.length === 0 && allItems.length > 0) {
+    const regularItems = allItems.filter(i => !isAnytimeItem(i) && checks[i.id] !== 'na');
+    if (regularItems.length === 0) return { pct: 0, done: 0, total: 0 };
+    const tw = regularItems.reduce((s, i) => s + getItemWeight(i), 0);
+    const dw = regularItems.filter(i => checks[i.id] === true).reduce((s, i) => s + getItemWeight(i), 0);
+    const dc = regularItems.filter(i => checks[i.id] === true).length;
+    return { pct: Math.round((dw / tw) * 100), done: dc, total: regularItems.length };
+  }
   if (scoring.length === 0) return { pct: 0, done: 0, total: 0 };
   const totalWeight = scoring.reduce((s, i) => s + getItemWeight(i), 0);
-  const doneWeight = scoring.filter(i => checks[i.id] === true).reduce((s, i) => s + getItemWeight(i), 0);
-  const doneCount = scoring.filter(i => checks[i.id] === true).length;
+  const doneWeight = scoring.filter(i => {
+    if (isAnytimeItem(i)) {
+      const period = getAnytimePeriod(i, TODAY);
+      return period ? !!findAnytimeCompletionDate(i, period) : false;
+    }
+    return checks[i.id] === true;
+  }).reduce((s, i) => s + getItemWeight(i), 0);
+  const doneCount = scoring.filter(i => {
+    if (isAnytimeItem(i)) {
+      const period = getAnytimePeriod(i, TODAY);
+      return period ? !!findAnytimeCompletionDate(i, period) : false;
+    }
+    return checks[i.id] === true;
+  }).length;
   return {
     pct: Math.round((doneWeight / totalWeight) * 100),
     done: doneCount,
@@ -803,13 +869,22 @@ function renderWtd() {
   if (todayItems.length > 0) {
     html += '<div class="wtd-section-label">Your Items</div>';
     todayItems.forEach(item => {
-      const isDone = checks[item.id] === true;
+      let isDone = checks[item.id] === true;
       const isNA = checks[item.id] === 'na';
+      let atDoneTag = '';
+      // Anytime items: check if done on another day this period
+      if (isAnytimeItem(item) && !isDone && !isNA) {
+        const period = getAnytimePeriod(item, TODAY);
+        if (period) {
+          const compDate = findAnytimeCompletionDate(item, period);
+          if (compDate) { isDone = true; atDoneTag = ' (done ' + formatDate(compDate) + ')'; }
+        }
+      }
       const checkClass = isDone ? ' done' : (isNA ? ' na' : '');
       html += '<div class="wtd-card">';
       html += '<div class="wtd-check' + checkClass + '" onclick="toggleWtdCheck(' + item.id + ')"></div>';
       html += '<div class="wtd-body">';
-      html += '<div class="wtd-text' + (isDone ? ' done' : '') + '">' + esc(item.text) + '</div>';
+      html += '<div class="wtd-text' + (isDone ? ' done' : '') + '">' + esc(item.text) + atDoneTag + '</div>';
       html += '<div class="wtd-repeat">' + getRepeatLabel(item.repeat) + '</div>';
       html += '</div>';
       html += '<div class="wtd-weight">Lvl ' + getItemWeight(item) + '</div>';
@@ -846,18 +921,27 @@ function renderWtd() {
 
 // ===== TOGGLE WTD CHECK =====
 function toggleWtdCheck(itemId) {
-  // Handle string IDs (synthetic items)
   const id = typeof itemId === 'string' ? itemId : parseInt(itemId);
   if (!wtdChecks[TODAY]) wtdChecks[TODAY] = {};
   const current = wtdChecks[TODAY][id];
-  // If N/A, skip
-  // Cycle: unchecked → checked → unchecked
+  if (current === 'na') return;
+  // If anytime item already completed on a different day this period, don't toggle
+  const item = wtdItems.find(i => i.id === id) || SYNTHETIC_ITEMS.find(i => i.id === id);
+  if (item && isAnytimeItem(item)) {
+    const period = getAnytimePeriod(item, TODAY);
+    if (period) {
+      const compDate = findAnytimeCompletionDate(item, period);
+      if (compDate && compDate !== TODAY) {
+        showToast('Already done on ' + formatDate(compDate));
+        return;
+      }
+    }
+  }
   wtdChecks[TODAY][id] = !current;
   setData('wtdChecks', wtdChecks);
   renderWtd();
 
   if (wtdChecks[TODAY][id]) {
-    const item = wtdItems.find(i => i.id === id) || SYNTHETIC_ITEMS.find(i => i.id === id);
     if (item) showToast('✓ ' + item.text);
   }
 }
