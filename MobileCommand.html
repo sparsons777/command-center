@@ -400,7 +400,10 @@ body {
           <option value="">No Project</option>
         </select>
       </div>
-      <div class="add-form-row">
+      <div class="add-form-row" style="align-items:center;gap:8px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-dim);cursor:pointer;flex:1">
+          <input type="checkbox" id="qaTaskHardDeadline" style="width:16px;height:16px;accent-color:var(--red)"> Hard Deadline
+        </label>
         <button class="add-btn" style="flex:1" onclick="quickAddTask()">+ Add Task</button>
       </div>
     </div>
@@ -808,6 +811,23 @@ function getTodayWtdItems() {
   return results;
 }
 
+function applyWtdDisplayOrder(items) {
+  const order = getData('wtdDisplayOrder', []);
+  if (!order.length) return items;
+  const map = {};
+  items.forEach(i => map[i.id] = i);
+  const ordered = [];
+  order.forEach(id => { if (map[id]) { ordered.push(map[id]); delete map[id]; } });
+  Object.values(map).forEach(i => ordered.push(i));
+  return ordered;
+}
+
+let wtdShowCompleted = false;
+function toggleWtdShowCompleted() {
+  wtdShowCompleted = !wtdShowCompleted;
+  renderWtd();
+}
+
 function getWtdScore() {
   const allItems = [...getTodayWtdItems(), ...SYNTHETIC_ITEMS];
   const checks = wtdChecks[TODAY] || {};
@@ -852,7 +872,8 @@ function getWtdScore() {
 // ===== RENDER WTD =====
 function renderWtd() {
   const list = document.getElementById('wtdList');
-  const todayItems = getTodayWtdItems();
+  const rawItems = getTodayWtdItems();
+  const todayItems = applyWtdDisplayOrder(rawItems);
   const checks = wtdChecks[TODAY] || {};
   const score = getWtdScore();
 
@@ -863,7 +884,18 @@ function renderWtd() {
   fill.style.width = score.pct + '%';
   fill.style.background = score.pct >= 80 ? 'var(--green)' : score.pct >= 50 ? 'var(--accent)' : 'var(--red)';
 
+  // Helper: check if an item is done (regular or anytime)
+  function isItemDone(item) {
+    if (checks[item.id] === true) return true;
+    if (isAnytimeItem(item)) {
+      const period = getAnytimePeriod(item, TODAY);
+      if (period && findAnytimeCompletionDate(item, period)) return true;
+    }
+    return false;
+  }
+
   let html = '';
+  let completedCount = 0;
 
   // User items
   if (todayItems.length > 0) {
@@ -872,7 +904,6 @@ function renderWtd() {
       let isDone = checks[item.id] === true;
       const isNA = checks[item.id] === 'na';
       let atDoneTag = '';
-      // Anytime items: check if done on another day this period
       if (isAnytimeItem(item) && !isDone && !isNA) {
         const period = getAnytimePeriod(item, TODAY);
         if (period) {
@@ -880,6 +911,8 @@ function renderWtd() {
           if (compDate) { isDone = true; atDoneTag = ' (done ' + formatDate(compDate) + ')'; }
         }
       }
+      if (isDone) completedCount++;
+      if (isDone && !wtdShowCompleted) return; // hide completed
       const checkClass = isDone ? ' done' : (isNA ? ' na' : '');
       html += '<div class="wtd-card">';
       html += '<div class="wtd-check' + checkClass + '" onclick="toggleWtdCheck(' + item.id + ')"></div>';
@@ -897,6 +930,8 @@ function renderWtd() {
   SYNTHETIC_ITEMS.forEach(item => {
     const isDone = checks[item.id] === true;
     const isNA = checks[item.id] === 'na';
+    if (isDone) completedCount++;
+    if (isDone && !wtdShowCompleted) return; // hide completed
     const checkClass = isDone ? ' done' : (isNA ? ' na' : '');
     html += '<div class="wtd-card wtd-synthetic">';
     html += '<div class="wtd-check' + checkClass + '" onclick="toggleWtdCheck(\'' + item.id + '\')"></div>';
@@ -908,12 +943,20 @@ function renderWtd() {
     html += '</div>';
   });
 
-  if (todayItems.length === 0) {
+  if (todayItems.length === 0 && !wtdShowCompleted) {
     html = '<div class="wtd-section-label">Auto-Tracked</div>' + html.split('Auto-Tracked</div>')[1];
     html = '<div class="empty-state" style="padding:20px"><div class="empty-state-icon">🏆</div>' +
       '<div class="empty-state-text">No custom WTD items for today.<br>Add some via the + button!</div></div>' +
       '<div class="wtd-section-label">Auto-Tracked</div>' +
       html.split('Auto-Tracked</div>').pop();
+  }
+
+  // Show completed toggle
+  if (completedCount > 0) {
+    html += '<div style="text-align:center;padding:12px 0">';
+    html += '<span onclick="toggleWtdShowCompleted()" style="color:var(--accent);font-size:12px;cursor:pointer;opacity:0.7">';
+    html += wtdShowCompleted ? '▲ Hide completed (' + completedCount + ')' : '▼ Show completed (' + completedCount + ')';
+    html += '</span></div>';
   }
 
   list.innerHTML = html;
@@ -954,12 +997,13 @@ function quickAddTask() {
   const priority = document.getElementById('qaTaskPri').value;
   const due = document.getElementById('qaTaskDue').value;
   const project = document.getElementById('qaTaskProject').value;
+  const hardDeadline = document.getElementById('qaTaskHardDeadline').checked;
 
   const taskId = Date.now();
   const newTask = {
     id: taskId, text: text, tag: tag, priority: priority,
     due: due, project: project,
-    hardDeadline: false, recur: '',
+    hardDeadline: hardDeadline, recur: '',
     isFrog: false, is8020: false,
     chainId: '', chainOrder: 0, chainTotal: 0,
     done: false, created: TODAY, completed: ''
@@ -972,6 +1016,7 @@ function quickAddTask() {
 
   document.getElementById('qaTaskText').value = '';
   document.getElementById('qaTaskDue').value = '';
+  document.getElementById('qaTaskHardDeadline').checked = false;
   closeSheet();
   renderTasks();
   showToast('+ Task added');
