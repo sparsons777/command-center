@@ -1,0 +1,24 @@
+{
+  "name": "Mobile Command",
+  "short_name": "MobileCmd",
+  "description": "Mobile companion for the Life Redesign Command Center",
+  "start_url": "./MobileCommand.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f1923",
+  "theme_color": "#0f1923",
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
