@@ -2359,11 +2359,11 @@ function ico(name, size, color) {
   </div>
 
   <div class="queue-tabs">
-    <div class="queue-tab active" data-qcat="all" onclick="setQueueFilter('all')">All</div>
-    <div class="queue-tab" data-qcat="todo" onclick="setQueueFilter('todo')">To Do</div>
+    <div class="queue-tab active" data-qcat="todo" onclick="setQueueFilter('todo')">To Do</div>
     <div class="queue-tab" data-qcat="ideas" onclick="setQueueFilter('ideas')">Ideas</div>
     <div class="queue-tab" data-qcat="groceries" onclick="setQueueFilter('groceries')">Groceries</div>
     <div class="queue-tab" data-qcat="wishlist" onclick="setQueueFilter('wishlist')">Wish List</div>
+    <div class="queue-tab" data-qcat="all" onclick="setQueueFilter('all')">All</div>
   </div>
 
   <div id="queueList"></div>
@@ -13899,7 +13899,7 @@ function crmGetMessageTemplates(contact, firstName) {
 
 // ===== CAPTURE QUEUE =====
 let captureQueue = getData('captureQueue', []);
-let queueFilter = 'all';
+let queueFilter = 'todo';
 
 function setQueueFilter(cat) {
   queueFilter = cat;
