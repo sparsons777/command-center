@@ -3450,7 +3450,8 @@ function ico(name, size, color) {
       <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);cursor:pointer">
         <input type="file" id="wishNewImg" accept="image/*" style="font-size:11px;max-width:220px"> Image (optional)
       </label>
-      <button class="btn btn-primary" onclick="wishAdd()" style="margin-left:auto">+ Add to Wish List</button>
+      <button class="btn btn-primary" id="wishSubmitBtn" onclick="wishAdd()" style="margin-left:auto">+ Add to Wish List</button>
+      <button class="btn" id="wishCancelBtn" onclick="wishCancelEdit()" style="display:none;background:var(--bg2);border:1px solid var(--border);margin-left:6px">Cancel</button>
     </div>
   </div>
   <div id="wishList"></div>
@@ -9231,6 +9232,7 @@ function renderJournal() {
 let journalSearchQuery = '';
 let journalSearchActiveIdx = 0; // which match is currently "active"
 
+function esc(s) { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML; }
 function _escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
@@ -13972,53 +13974,94 @@ function renderQueue() {
     html += `<div style="display:flex;align-items:center;justify-content:space-between">`;
     html += `<span class="queue-card-time">${dateStr} ${timeStr}</span>`;
     html += `<div style="display:flex;gap:6px">`;
-
-    if (item.category === 'todo') {
-      html += `<button class="queue-btn expand" onclick="toggleQueueEnrich(${item.id})">Enrich & Save</button>`;
-    } else if (item.category === 'groceries') {
-      html += `<button class="queue-btn save" onclick="queueSaveGrocery(${item.id})">→ Grocery List</button>`;
-    } else if (item.category === 'wishlist') {
-      html += `<button class="queue-btn save" onclick="queueSaveWishlist(${item.id})">→ Wish List</button>`;
-    } else if (item.category === 'ideas') {
-      html += `<button class="queue-btn save" onclick="queueSaveIdea(${item.id})">→ Ideas</button>`;
-    }
+    html += `<button class="queue-btn expand" onclick="toggleQueueEnrich(${item.id})">Enrich & Save</button>`;
     html += `<button class="queue-btn delete" onclick="queueDelete(${item.id})">✕</button>`;
     html += `</div></div>`;
 
-    // Enrichment form (only for To Do items)
-    if (item.category === 'todo') {
-      html += `<div class="queue-enrich" id="qenrich_${item.id}">`;
-      html += `<div class="form-row">`;
-      html += `<select id="qTag_${item.id}"><option value="personal">Personal</option><option value="finance">Finance</option><option value="health">Health</option><option value="business">Business</option><option value="sidehustle">Side Hustle</option></select>`;
-      html += `<select id="qPri_${item.id}"><option value="p2">P2 — Should Do</option><option value="p0">🔥 Critical</option><option value="p1">P1 — Must Do</option><option value="p3">P3 — Nice To Do</option></select>`;
-      html += `<input type="date" id="qDue_${item.id}" style="max-width:150px">`;
-      html += `</div>`;
-      html += `<div class="form-row">`;
-      html += `<select id="qProject_${item.id}" style="max-width:200px"><option value="">— No Project —</option></select>`;
-      html += `<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim);cursor:pointer"><input type="checkbox" id="qHard_${item.id}" style="width:14px;height:14px;accent-color:#ff4444"> Hard Deadline</label>`;
-      html += `</div>`;
-      html += `<div class="queue-actions">`;
-      html += `<button class="queue-btn save" onclick="queueSaveTask(${item.id})">Save as Task</button>`;
-      html += `<button class="queue-btn delete" onclick="queueDelete(${item.id})">Discard</button>`;
-      html += `</div>`;
-      html += `</div>`;
-    }
+    // Enrichment form — full form matching destination section
+    html += `<div class="queue-enrich" id="qenrich_${item.id}">`;
 
+    // Category reassignment (all items)
+    html += `<div class="form-row"><label style="font-size:12px;color:var(--text-dim);white-space:nowrap">Category:</label>`;
+    html += `<select id="qCat_${item.id}" onchange="queueReassign(${item.id}, this.value)" style="max-width:160px">`;
+    ['todo','ideas','groceries','wishlist'].forEach(c => {
+      html += `<option value="${c}"${item.category === c ? ' selected' : ''}>${catLabels[c]}</option>`;
+    });
+    html += `</select></div>`;
+
+    // === TO DO enrichment ===
+    html += `<div id="qform_todo_${item.id}" style="display:${item.category === 'todo' ? 'block' : 'none'}">`;
+    html += `<div class="form-row">`;
+    html += `<input class="input-field" id="qText_${item.id}" value="${esc(item.text)}" placeholder="Task text..." style="flex:1">`;
     html += `</div>`;
+    html += `<div class="form-row">`;
+    html += `<select id="qTag_${item.id}"><option value="personal">Personal</option><option value="finance">Finance</option><option value="health">Health</option><option value="business">Business</option><option value="sidehustle">Side Hustle</option></select>`;
+    html += `<select id="qPri_${item.id}"><option value="p2">P2 — Should Do</option><option value="p0">🔥 Critical</option><option value="p1">P1 — Must Do</option><option value="p3">P3 — Nice To Do</option></select>`;
+    html += `<input type="date" id="qDue_${item.id}" class="input-field" style="max-width:160px">`;
+    html += `</div>`;
+    html += `<div class="form-row">`;
+    html += `<select id="qProject_${item.id}" style="max-width:200px"><option value="">— No Project —</option></select>`;
+    html += `<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim);cursor:pointer"><input type="checkbox" id="qHard_${item.id}" style="width:14px;height:14px;accent-color:#ff4444"> Hard Deadline</label>`;
+    html += `<select id="qRecur_${item.id}" style="max-width:150px"><option value="">No Repeat</option><option value="daily">Daily</option><option value="weekdays">Weekdays (M-F)</option><option value="weekly">Weekly</option><option value="biweekly">Every 2 Weeks</option><option value="monthly">Monthly</option></select>`;
+    html += `</div>`;
+    html += `<div class="queue-actions"><button class="queue-btn save" onclick="queueSaveTask(${item.id})">Save as Task</button><button class="queue-btn delete" onclick="queueDelete(${item.id})">Discard</button></div>`;
+    html += `</div>`;
+
+    // === GROCERY enrichment ===
+    html += `<div id="qform_groceries_${item.id}" style="display:${item.category === 'groceries' ? 'block' : 'none'}">`;
+    html += `<div class="form-row">`;
+    html += `<input class="input-field" id="qGrocName_${item.id}" value="${esc(item.text)}" placeholder="Item name..." style="flex:1">`;
+    html += `<input class="input-field" id="qGrocQty_${item.id}" placeholder="Qty" style="max-width:70px">`;
+    html += `<select id="qGrocCat_${item.id}" style="max-width:140px">`;
+    html += `<option value="produce">Produce</option><option value="dairy">Dairy</option><option value="meat">Meat</option><option value="bakery">Bakery</option><option value="frozen">Frozen</option><option value="pantry">Pantry</option><option value="drinks">Drinks</option><option value="snacks">Snacks</option><option value="household">Household</option><option value="other">Other</option>`;
+    html += `</select></div>`;
+    html += `<div class="queue-actions"><button class="queue-btn save" onclick="queueSaveGrocery(${item.id})">Save to Grocery List</button><button class="queue-btn delete" onclick="queueDelete(${item.id})">Discard</button></div>`;
+    html += `</div>`;
+
+    // === WISH LIST enrichment ===
+    html += `<div id="qform_wishlist_${item.id}" style="display:${item.category === 'wishlist' ? 'block' : 'none'}">`;
+    html += `<div class="form-row">`;
+    html += `<input class="input-field" id="qWishName_${item.id}" value="${esc(item.text)}" placeholder="Item name..." style="flex:1">`;
+    html += `<input class="input-field" id="qWishCost_${item.id}" placeholder="Cost ($)" type="number" style="max-width:110px">`;
+    html += `</div>`;
+    html += `<div class="form-row">`;
+    html += `<input class="input-field" id="qWishNotes_${item.id}" placeholder="Link, notes, details..." style="flex:1">`;
+    html += `<select id="qWishPri_${item.id}" style="max-width:120px"><option value="med">Medium</option><option value="high">High</option><option value="low">Low</option></select>`;
+    html += `</div>`;
+    html += `<div class="queue-actions"><button class="queue-btn save" onclick="queueSaveWishlist(${item.id})">Save to Wish List</button><button class="queue-btn delete" onclick="queueDelete(${item.id})">Discard</button></div>`;
+    html += `</div>`;
+
+    // === IDEAS enrichment ===
+    const rcats = (typeof researchCategories !== 'undefined') ? researchCategories : ['General','Technology','Finance','Health','Business','Science','Personal','Other'];
+    html += `<div id="qform_ideas_${item.id}" style="display:${item.category === 'ideas' ? 'block' : 'none'}">`;
+    html += `<div class="form-row">`;
+    html += `<input class="input-field" id="qIdeaTitle_${item.id}" value="${esc(item.text)}" placeholder="Research topic..." style="flex:1">`;
+    html += `<select id="qIdeaCat_${item.id}" style="max-width:140px">`;
+    rcats.forEach(c => { html += `<option value="${c}">${c}</option>`; });
+    html += `</select></div>`;
+    html += `<div class="form-row">`;
+    html += `<select id="qIdeaStatus_${item.id}" style="max-width:130px"><option value="New">New</option><option value="In Progress">In Progress</option><option value="Done">Done</option></select>`;
+    html += `<select id="qIdeaPri_${item.id}" style="max-width:120px"><option value="Medium">Medium</option><option value="High">High</option><option value="Low">Low</option></select>`;
+    html += `<input class="input-field" id="qIdeaLinks_${item.id}" placeholder="Links (URLs)..." style="flex:1">`;
+    html += `</div>`;
+    html += `<textarea class="input-field" id="qIdeaNotes_${item.id}" placeholder="Notes, context, why this matters..." style="min-height:60px;margin-bottom:8px"></textarea>`;
+    html += `<div class="queue-actions"><button class="queue-btn save" onclick="queueSaveIdea(${item.id})">Save to Ideas</button><button class="queue-btn delete" onclick="queueDelete(${item.id})">Discard</button></div>`;
+    html += `</div>`;
+
+    html += `</div>`; // close queue-enrich
+    html += `</div>`; // close queue-card
   });
   list.innerHTML = html;
 
-  // Populate project dropdowns
+  // Populate project dropdowns for To Do items
   filtered.forEach(item => {
-    if (item.category === 'todo') {
-      const sel = document.getElementById('qProject_' + item.id);
-      if (sel && typeof pmProjects !== 'undefined') {
-        pmProjects.forEach(p => {
-          const opt = document.createElement('option');
-          opt.value = p.name; opt.textContent = p.name;
-          sel.appendChild(opt);
-        });
-      }
+    const sel = document.getElementById('qProject_' + item.id);
+    if (sel && typeof pmProjects !== 'undefined') {
+      pmProjects.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.name; opt.textContent = p.name;
+        sel.appendChild(opt);
+      });
     }
   });
 }
@@ -14028,59 +14071,57 @@ function toggleQueueEnrich(id) {
   if (el) el.classList.toggle('open');
 }
 
+function queueReassign(id, newCat) {
+  const item = captureQueue.find(i => i.id === id);
+  if (!item) return;
+  item.category = newCat;
+  setData('captureQueue', captureQueue);
+  // Toggle form visibility
+  ['todo','groceries','wishlist','ideas'].forEach(c => {
+    const form = document.getElementById('qform_' + c + '_' + id);
+    if (form) form.style.display = c === newCat ? 'block' : 'none';
+  });
+}
+
 function queueSaveTask(id) {
   const item = captureQueue.find(i => i.id === id);
   if (!item) return;
+  const textEl = document.getElementById('qText_' + id);
+  const text = textEl ? textEl.value.trim() : item.text;
   const tag = document.getElementById('qTag_' + id).value;
   const priority = document.getElementById('qPri_' + id).value;
   const due = document.getElementById('qDue_' + id).value;
   const project = document.getElementById('qProject_' + id).value;
   const hardDeadline = document.getElementById('qHard_' + id).checked;
+  const recur = document.getElementById('qRecur_' + id) ? document.getElementById('qRecur_' + id).value : '';
 
-  // Create task in allTasks
   const newTask = {
     id: Date.now(),
-    text: item.text,
-    tag: tag,
-    priority: item.fire ? 'p0' : priority,
-    due: due,
-    project: project,
+    text: text || item.text,
+    tag: tag, priority: item.fire ? 'p0' : priority,
+    due: due, project: project,
     hardDeadline: hardDeadline || false,
-    recur: '',
-    isFrog: false,
-    is8020: false,
-    chainId: '',
-    chainOrder: 0,
-    chainTotal: 0,
-    done: false,
-    created: TODAY,
-    completed: ''
+    recur: recur || '',
+    isFrog: false, is8020: false,
+    chainId: '', chainOrder: 0, chainTotal: 0,
+    done: false, created: TODAY, completed: ''
   };
   tasks.push(newTask);
   setData('allTasks', tasks);
 
-  // Sync to PM if project assigned
   if (project && typeof pmProjects !== 'undefined') {
     const proj = pmProjects.find(p => p.name.toLowerCase() === project.toLowerCase());
     if (proj) {
       if (!proj.tasks) proj.tasks = [];
-      proj.tasks.push({
-        id: Date.now() + 1,
-        syncId: 'sync_' + newTask.id,
-        text: newTask.text,
-        done: false,
-        created: TODAY
-      });
+      proj.tasks.push({ id: Date.now() + 1, syncId: 'sync_' + newTask.id, text: newTask.text, done: false, created: TODAY });
       proj.lastTouched = TODAY;
       setData('pmProjects', pmProjects);
     }
   }
 
-  // Remove from queue
   captureQueue = captureQueue.filter(i => i.id !== id);
   setData('captureQueue', captureQueue);
-  renderQueue();
-  renderTasks();
+  renderQueue(); renderTasks();
   showToast('✓ Saved as task');
 }
 
@@ -14088,7 +14129,16 @@ function queueSaveGrocery(id) {
   const item = captureQueue.find(i => i.id === id);
   if (!item) return;
   if (typeof groceryList === 'undefined') { showToast('Grocery list not available'); return; }
-  groceryList.push({ id: Date.now(), text: item.text, done: false, created: TODAY });
+  const nameEl = document.getElementById('qGrocName_' + id);
+  const qtyEl = document.getElementById('qGrocQty_' + id);
+  const catEl = document.getElementById('qGrocCat_' + id);
+  groceryList.push({
+    id: Date.now(),
+    name: nameEl ? nameEl.value.trim() || item.text : item.text,
+    qty: qtyEl ? qtyEl.value.trim() : '',
+    category: catEl ? catEl.value : 'other',
+    checked: false
+  });
   setData('groceryList', groceryList);
   captureQueue = captureQueue.filter(i => i.id !== id);
   setData('captureQueue', captureQueue);
@@ -14101,7 +14151,19 @@ function queueSaveWishlist(id) {
   const item = captureQueue.find(i => i.id === id);
   if (!item) return;
   if (typeof wishList === 'undefined') { showToast('Wish list not available'); return; }
-  wishList.push({ id: Date.now(), text: item.text, done: false, created: TODAY, link: '', price: '' });
+  const nameEl = document.getElementById('qWishName_' + id);
+  const costEl = document.getElementById('qWishCost_' + id);
+  const notesEl = document.getElementById('qWishNotes_' + id);
+  const priEl = document.getElementById('qWishPri_' + id);
+  wishList.push({
+    id: Date.now(),
+    name: nameEl ? nameEl.value.trim() || item.text : item.text,
+    cost: costEl ? costEl.value : 0,
+    notes: notesEl ? notesEl.value.trim() : '',
+    priority: priEl ? priEl.value : 'med',
+    image: '',
+    created: TODAY
+  });
   setData('wishList', wishList);
   captureQueue = captureQueue.filter(i => i.id !== id);
   setData('captureQueue', captureQueue);
@@ -14113,11 +14175,24 @@ function queueSaveWishlist(id) {
 function queueSaveIdea(id) {
   const item = captureQueue.find(i => i.id === id);
   if (!item) return;
-  // Save to research ideas (will be expanded in Task #45 with categories)
+  const titleEl = document.getElementById('qIdeaTitle_' + id);
+  const catEl = document.getElementById('qIdeaCat_' + id);
+  const statusEl = document.getElementById('qIdeaStatus_' + id);
+  const priEl = document.getElementById('qIdeaPri_' + id);
+  const linksEl = document.getElementById('qIdeaLinks_' + id);
+  const notesEl = document.getElementById('qIdeaNotes_' + id);
   const ri = getData('researchIdeas', []);
-  ri.push({ id: Date.now(), text: item.text, category: 'general', status: 'new', notes: '', created: TODAY });
+  ri.push({
+    id: Date.now(),
+    text: titleEl ? titleEl.value.trim() || item.text : item.text,
+    category: catEl ? catEl.value : 'General',
+    status: statusEl ? statusEl.value : 'New',
+    priority: priEl ? priEl.value : 'Medium',
+    links: linksEl ? linksEl.value.trim() : '',
+    notes: notesEl ? notesEl.value.trim() : '',
+    created: TODAY
+  });
   setData('researchIdeas', ri);
-  // Update in-memory if already loaded
   if (typeof researchIdeas !== 'undefined') { researchIdeas.length = 0; ri.forEach(x => researchIdeas.push(x)); }
   captureQueue = captureQueue.filter(i => i.id !== id);
   setData('captureQueue', captureQueue);
@@ -14133,15 +14208,15 @@ function queueDelete(id) {
   showToast('Item removed');
 }
 
-// Quick-save all: one-click save for groceries/wishlist items
+// Quick-save all: one-click save for groceries/wishlist items (uses raw text, no enrichment)
 function queueSaveAllCategory(cat) {
   const items = captureQueue.filter(i => i.category === cat && !i.done);
   if (items.length === 0) return;
   items.forEach(item => {
     if (cat === 'groceries') {
-      groceryList.push({ id: Date.now() + Math.random(), text: item.text, done: false, created: TODAY });
+      groceryList.push({ id: Date.now() + Math.random(), name: item.text, qty: '', category: 'other', checked: false });
     } else if (cat === 'wishlist') {
-      wishList.push({ id: Date.now() + Math.random(), text: item.text, done: false, created: TODAY, link: '', price: '' });
+      wishList.push({ id: Date.now() + Math.random(), name: item.text, cost: 0, notes: '', priority: 'med', image: '', created: TODAY });
     }
   });
   if (cat === 'groceries') setData('groceryList', groceryList);
@@ -14283,20 +14358,39 @@ function wishAdd() {
   const name = document.getElementById('wishNewName').value.trim();
   if (!name) return;
   const fileInput = document.getElementById('wishNewImg');
-  const addItem = (imageData) => {
-    wishList.push({
-      id: Date.now(),
-      name: name,
-      cost: document.getElementById('wishNewCost').value || 0,
-      notes: document.getElementById('wishNewNotes').value.trim(),
-      priority: document.getElementById('wishNewPriority').value,
-      image: imageData || '',
-      created: TODAY
-    });
+  const cost = document.getElementById('wishNewCost').value || 0;
+  const notes = document.getElementById('wishNewNotes').value.trim();
+  const priority = document.getElementById('wishNewPriority').value;
+
+  const saveItem = (imageData) => {
+    if (wishEditIdx >= 0 && wishEditIdx < wishList.length) {
+      // Edit mode — update existing item
+      const w = wishList[wishEditIdx];
+      w.name = name;
+      w.cost = cost;
+      w.notes = notes;
+      w.priority = priority;
+      if (imageData) w.image = imageData; // Only overwrite image if new one selected
+    } else {
+      // Add mode — create new item
+      wishList.push({
+        id: Date.now(),
+        name: name,
+        cost: cost,
+        notes: notes,
+        priority: priority,
+        image: imageData || '',
+        created: TODAY
+      });
+    }
+    // Reset form
+    wishEditIdx = -1;
     document.getElementById('wishNewName').value = '';
     document.getElementById('wishNewCost').value = '';
     document.getElementById('wishNewNotes').value = '';
     document.getElementById('wishNewPriority').value = 'med';
+    document.getElementById('wishSubmitBtn').textContent = '+ Add to Wish List';
+    document.getElementById('wishCancelBtn').style.display = 'none';
     fileInput.value = '';
     saveWishList();
     renderWishList();
@@ -14305,10 +14399,10 @@ function wishAdd() {
   // Handle image upload
   if (fileInput.files && fileInput.files[0]) {
     const reader = new FileReader();
-    reader.onload = function(e) { addItem(e.target.result); };
+    reader.onload = function(e) { saveItem(e.target.result); };
     reader.readAsDataURL(fileInput.files[0]);
   } else {
-    addItem('');
+    saveItem('');
   }
 }
 
@@ -14319,19 +14413,32 @@ function wishDelete(i) {
   renderWishList();
 }
 
+let wishEditIdx = -1;
+
 function wishEdit(i) {
+  wishEditIdx = i;
   const w = wishList[i];
-  const name = prompt('Item name:', w.name);
-  if (name === null) return;
-  const cost = prompt('Cost ($):', w.cost || '');
-  const notes = prompt('Notes / links:', w.notes || '');
-  const priority = prompt('Priority (high/med/low):', w.priority || 'med');
-  w.name = name || w.name;
-  w.cost = cost || 0;
-  w.notes = notes || '';
-  if (['high','med','low'].includes(priority)) w.priority = priority;
-  saveWishList();
-  renderWishList();
+  document.getElementById('wishNewName').value = w.name || '';
+  document.getElementById('wishNewCost').value = w.cost || '';
+  document.getElementById('wishNewNotes').value = w.notes || '';
+  document.getElementById('wishNewPriority').value = w.priority || 'med';
+  document.getElementById('wishNewImg').value = '';
+  // Update button and show cancel
+  document.getElementById('wishSubmitBtn').textContent = 'Save Changes';
+  document.getElementById('wishCancelBtn').style.display = '';
+  // Scroll to form
+  document.querySelector('.wish-input-form').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function wishCancelEdit() {
+  wishEditIdx = -1;
+  document.getElementById('wishNewName').value = '';
+  document.getElementById('wishNewCost').value = '';
+  document.getElementById('wishNewNotes').value = '';
+  document.getElementById('wishNewPriority').value = 'med';
+  document.getElementById('wishNewImg').value = '';
+  document.getElementById('wishSubmitBtn').textContent = '+ Add to Wish List';
+  document.getElementById('wishCancelBtn').style.display = 'none';
 }
 
 // ===== SCOREBOARD =====

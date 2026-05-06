@@ -110,6 +110,31 @@ body {
   cursor:pointer; font-size:16px; opacity:0.25; transition:opacity 0.2s;
 }
 .capture-fire.lit { opacity:1; }
+.capture-edit {
+  width:28px; height:28px; display:flex; align-items:center; justify-content:center;
+  cursor:pointer; font-size:14px; opacity:0.3; transition:opacity 0.2s;
+}
+.capture-item:hover .capture-edit, .capture-item:active .capture-edit { opacity:0.7; }
+.capture-edit-panel {
+  display:none; padding:10px 16px 12px; background:var(--bg2);
+  border-bottom:1px solid var(--border);
+}
+.capture-edit-panel.open { display:block; }
+.ce-input {
+  width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px;
+  background:var(--bg); color:var(--text); font-size:14px; margin-bottom:8px;
+  font-family:inherit; box-sizing:border-box;
+}
+.ce-row { display:flex; gap:8px; align-items:center; }
+.ce-label { font-size:12px; color:var(--text-muted); white-space:nowrap; }
+.ce-select {
+  flex:1; padding:6px 8px; border:1px solid var(--border); border-radius:6px;
+  background:var(--bg); color:var(--text); font-size:13px;
+}
+.ce-save {
+  padding:6px 14px; background:var(--orange); color:#fff; border:none;
+  border-radius:6px; font-size:13px; font-weight:600; cursor:pointer;
+}
 .capture-delete {
   font-size:18px; color:var(--text-muted); cursor:pointer; padding:4px;
   opacity:0; transition:opacity 0.2s;
@@ -501,6 +526,46 @@ function deleteCaptureItem(id) {
   renderCapture();
 }
 
+function toggleCaptureEdit(id) {
+  const el = document.getElementById('cedit_' + id);
+  if (el) el.classList.toggle('open');
+}
+
+function saveCaptureEdit(id) {
+  const item = captureQueue.find(i => i.id === id);
+  if (!item) return;
+  const textEl = document.getElementById('ceText_' + id);
+  const catEl = document.getElementById('ceCat_' + id);
+  if (textEl && textEl.value.trim()) item.text = textEl.value.trim();
+  if (catEl) item.category = catEl.value;
+  setData('captureQueue', captureQueue);
+  renderCapture();
+  showToast('Updated');
+}
+
+function buildCaptureItemHtml(item) {
+  const catLabels = {todo:'To Do', ideas:'Idea', groceries:'Grocery', wishlist:'Wish List'};
+  let h = '<div class="capture-item" id="cap_'+item.id+'">';
+  h += '<div class="capture-check" onclick="deleteCaptureItem('+item.id+')"></div>';
+  h += '<div class="capture-text">' + esc(item.text) + '</div>';
+  h += '<div class="capture-edit" onclick="toggleCaptureEdit('+item.id+')" title="Edit">✏️</div>';
+  h += '<div class="capture-fire' + (item.fire ? ' lit' : '') + '" onclick="toggleCaptureFire_item('+item.id+')">🔥</div>';
+  h += '</div>';
+  // Expandable edit panel
+  h += '<div class="capture-edit-panel" id="cedit_'+item.id+'">';
+  h += '<input class="ce-input" id="ceText_'+item.id+'" value="'+esc(item.text)+'">';
+  h += '<div class="ce-row">';
+  h += '<label class="ce-label">Category:</label>';
+  h += '<select class="ce-select" id="ceCat_'+item.id+'">';
+  ['todo','ideas','groceries','wishlist'].forEach(c => {
+    h += '<option value="'+c+'"'+(item.category===c?' selected':'')+'>'+catLabels[c]+'</option>';
+  });
+  h += '</select>';
+  h += '<button class="ce-save" onclick="saveCaptureEdit('+item.id+')">Save</button>';
+  h += '</div></div>';
+  return h;
+}
+
 function renderCapture() {
   const list = document.getElementById('captureList');
   const catItems = captureQueue.filter(i => i.category === currentCat && !i.done);
@@ -523,25 +588,16 @@ function renderCapture() {
 
   // For "To Do" tab, show queue items first, then desktop tasks below
   if (currentCat === 'todo') {
-    // Queue items
     if (catItems.length > 0) {
       html += '<div class="section-sep">Queued — awaiting review</div>';
-      catItems.forEach(item => {
-        html += '<div class="capture-item" id="cap_'+item.id+'">';
-        html += '<div class="capture-check" onclick="deleteCaptureItem('+item.id+')"></div>';
-        html += '<div class="capture-text">' + esc(item.text) + '</div>';
-        html += '<div class="capture-fire' + (item.fire ? ' lit' : '') + '" onclick="toggleCaptureFire_item('+item.id+')">🔥</div>';
-        html += '</div>';
-      });
+      catItems.forEach(item => { html += buildCaptureItemHtml(item); });
     }
 
-    // Fire items across all categories
     const fireItems = captureQueue.filter(i => i.fire && !i.done);
     if (fireItems.length > 0 && catItems.length === 0) {
       // Show fire section if no todo items
     }
 
-    // Desktop tasks (scored, completable)
     const openTasks = tasks.filter(t => !t.done);
     if (openTasks.length > 0) {
       const sorted = openTasks.sort((a,b) => scoreTask(b) - scoreTask(a)).slice(0, 20);
@@ -565,19 +621,12 @@ function renderCapture() {
       });
     }
   } else {
-    // Other categories: just show queue items
     if (catItems.length === 0) {
       html += '<div class="empty-state"><div class="empty-state-icon">' +
         (currentCat==='ideas'?'💡':currentCat==='groceries'?'🛒':'✨') +
         '</div><div class="empty-state-text">No ' + currentCat + ' items yet.<br>Add one below!</div></div>';
     } else {
-      catItems.forEach(item => {
-        html += '<div class="capture-item" id="cap_'+item.id+'">';
-        html += '<div class="capture-check" onclick="deleteCaptureItem('+item.id+')"></div>';
-        html += '<div class="capture-text">' + esc(item.text) + '</div>';
-        html += '<div class="capture-fire' + (item.fire ? ' lit' : '') + '" onclick="toggleCaptureFire_item('+item.id+')">🔥</div>';
-        html += '</div>';
-      });
+      catItems.forEach(item => { html += buildCaptureItemHtml(item); });
     }
   }
 
