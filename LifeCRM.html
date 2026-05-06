@@ -1817,6 +1817,37 @@
   .merge-preview{background:var(--bg2);border-radius:8px;padding:12px;margin-bottom:10px}
   .merge-preview-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--green);margin-bottom:6px}
   .merge-actions{display:flex;gap:8px;justify-content:center}
+
+  /* ===== QUEUE / INBOX ===== */
+  .queue-tabs{display:flex;gap:4px;margin-bottom:16px;background:var(--bg2);border-radius:10px;padding:3px}
+  .queue-tab{flex:1;text-align:center;padding:8px 4px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text-dim);transition:all .2s;position:relative}
+  .queue-tab.active{background:var(--accent);color:#000}
+  .queue-tab .q-count{position:absolute;top:-2px;right:4px;background:var(--red);color:#fff;font-size:9px;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700}
+  .queue-card{background:var(--card);border-radius:10px;padding:14px;margin-bottom:10px;border:1px solid var(--glass-border);box-shadow:var(--shadow)}
+  .queue-card.fire{border-left:3px solid var(--fire)}
+  .queue-card-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .queue-card-text{flex:1;font-size:14px;font-weight:500}
+  .queue-card-time{font-size:10px;color:var(--text-dim)}
+  .queue-card-cat{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:.5px}
+  .queue-card-cat.todo{background:rgba(52,168,83,0.12);color:var(--green)}
+  .queue-card-cat.ideas{background:rgba(232,185,49,0.12);color:var(--accent)}
+  .queue-card-cat.groceries{background:rgba(20,184,166,0.12);color:var(--teal)}
+  .queue-card-cat.wishlist{background:rgba(217,48,37,0.12);color:var(--red)}
+  .queue-enrich{display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+  .queue-enrich.open{display:block}
+  .queue-enrich .form-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+  .queue-enrich .form-row select,.queue-enrich .form-row input{padding:7px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;font-family:Inter,sans-serif}
+  .queue-actions{display:flex;gap:6px;margin-top:8px}
+  .queue-btn{padding:7px 14px;border-radius:6px;font-size:12px;font-weight:600;border:none;cursor:pointer;font-family:Inter,sans-serif}
+  .queue-btn.save{background:var(--green);color:#fff}
+  .queue-btn.save:hover{background:#2d9249}
+  .queue-btn.delete{background:rgba(217,48,37,0.15);color:var(--red)}
+  .queue-btn.delete:hover{background:rgba(217,48,37,0.25)}
+  .queue-btn.expand{background:var(--bg2);color:var(--text-dim)}
+  .queue-btn.expand:hover{background:var(--bg3)}
+  .queue-empty{text-align:center;padding:40px 20px;color:var(--text-dim)}
+  .queue-empty-icon{font-size:40px;margin-bottom:12px}
+  .queue-empty-text{font-size:13px;line-height:1.5}
 </style>
 <script>
 // SVG Icon system — Lucide-inspired stroke icons
@@ -1892,6 +1923,7 @@ function ico(name, size, color) {
   <div class="nav-section-items">
   <div class="nav-item" data-page="tasks"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="#34a853" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>Tasks<span class="badge" id="navTaskBadge" style="display:none">0</span></div>
   <div class="nav-item" data-page="frog"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="#34a853" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="13" rx="9" ry="7"/><circle cx="7.5" cy="7" r="2.5"/><circle cx="16.5" cy="7" r="2.5"/><circle cx="7.5" cy="7" r="1" fill="#34a853"/><circle cx="16.5" cy="7" r="1" fill="#34a853"/><path d="M8 16c1.5 1.5 6.5 1.5 8 0"/></svg></span>Eat the Frog</div>
+  <div class="nav-item" data-page="queue"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="#e8710a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></span>Capture Queue<span class="badge" id="navQueueBadge" style="display:none;background:var(--orange)">0</span></div>
   </div></div>
 
   <div class="nav-section" data-section="business">
@@ -2192,6 +2224,17 @@ function ico(name, size, color) {
 <!-- ========== TASKS PAGE ========== -->
 <div class="page" id="page-tasks">
   <div class="page-header"><span class="icon" id="phTasks"></span>Tasks</div>
+  <div id="staleTaskBanner" style="display:none;background:rgba(232,185,49,0.1);border:1px solid rgba(232,185,49,0.3);border-radius:10px;padding:14px 16px;margin-bottom:14px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <span style="font-size:18px">⏰</span>
+      <div style="font-size:13px;font-weight:600;color:var(--accent)">Stale Tasks Found</div>
+      <span id="staleTaskCount" style="font-size:11px;color:var(--text-dim);margin-left:auto"></span>
+    </div>
+    <div id="staleTaskList" style="font-size:12px;line-height:1.8"></div>
+    <div style="margin-top:8px;text-align:right">
+      <button class="btn btn-sm" onclick="dismissAllStaleTasks()" style="font-size:11px;padding:5px 12px">Dismiss All (keep)</button>
+    </div>
+  </div>
   <div class="row">
     <div class="col-grow">
       <div class="panel">
@@ -2300,6 +2343,30 @@ function ico(name, size, color) {
       </div>
     </div>
   </div>
+</div>
+
+<!-- ========== CAPTURE QUEUE PAGE ========== -->
+<div class="page" id="page-queue">
+  <div class="page-header"><span class="icon" id="phQueue"></span>Capture Queue</div>
+  <div class="page-sub">Items captured from mobile. Enrich and save to send them to their destinations.</div>
+
+  <div class="kpi-row" style="margin-bottom:16px">
+    <div class="kpi-card"><div class="kpi-label">Total Queued</div><div class="kpi-value" id="queueKpiTotal">0</div></div>
+    <div class="kpi-card"><div class="kpi-label">To Do</div><div class="kpi-value" id="queueKpiTodo">0</div></div>
+    <div class="kpi-card"><div class="kpi-label">Ideas</div><div class="kpi-value" id="queueKpiIdeas">0</div></div>
+    <div class="kpi-card"><div class="kpi-label">Groceries</div><div class="kpi-value" id="queueKpiGroceries">0</div></div>
+    <div class="kpi-card"><div class="kpi-label">Wish List</div><div class="kpi-value" id="queueKpiWishlist">0</div></div>
+  </div>
+
+  <div class="queue-tabs">
+    <div class="queue-tab active" data-qcat="all" onclick="setQueueFilter('all')">All</div>
+    <div class="queue-tab" data-qcat="todo" onclick="setQueueFilter('todo')">To Do</div>
+    <div class="queue-tab" data-qcat="ideas" onclick="setQueueFilter('ideas')">Ideas</div>
+    <div class="queue-tab" data-qcat="groceries" onclick="setQueueFilter('groceries')">Groceries</div>
+    <div class="queue-tab" data-qcat="wishlist" onclick="setQueueFilter('wishlist')">Wish List</div>
+  </div>
+
+  <div id="queueList"></div>
 </div>
 
 <!-- ========== EAT THE FROG PAGE ========== -->
@@ -2693,6 +2760,7 @@ function ico(name, size, color) {
     <div class="budget-tab" onclick="switchBudgetTab('bills')">Monthly Bills</div>
     <div class="budget-tab" onclick="switchBudgetTab('income')">Income</div>
     <div class="budget-tab" onclick="switchBudgetTab('actions')">Action Items</div>
+    <div class="budget-tab" onclick="switchBudgetTab('calculator')">Calculator</div>
   </div>
 
   <!-- TAB: Debts -->
@@ -2879,6 +2947,98 @@ function ico(name, size, color) {
             </select>
           </div>
           <button class="btn btn-primary" style="margin-top:12px;width:auto" onclick="addFinTask()">Add Task</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: Calculator -->
+  <div class="budget-tab-content" id="budgetTab-calculator" style="display:none">
+    <div class="row">
+      <div class="col-grow">
+        <div class="panel">
+          <div class="panel-title">Mortgage Calculator</div>
+          <div class="page-sub" style="margin-bottom:14px">Estimate monthly payment, total interest, and amortization.</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+            <div>
+              <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Home Price ($)</label>
+              <input class="input-field" type="number" id="calcHomePrice" value="250000" oninput="calcMortgage()">
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Down Payment ($)</label>
+              <input class="input-field" type="number" id="calcDownPayment" value="25000" oninput="calcMortgage()">
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Interest Rate (%)</label>
+              <input class="input-field" type="number" id="calcRate" value="6.5" step="0.1" oninput="calcMortgage()">
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Loan Term (years)</label>
+              <select class="input-field" id="calcTerm" style="padding:10px 12px" onchange="calcMortgage()">
+                <option value="30">30 years</option>
+                <option value="20">20 years</option>
+                <option value="15">15 years</option>
+                <option value="10">10 years</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Property Tax (%/yr)</label>
+              <input class="input-field" type="number" id="calcTax" value="1.2" step="0.1" oninput="calcMortgage()">
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Home Insurance ($/yr)</label>
+              <input class="input-field" type="number" id="calcInsurance" value="1200" oninput="calcMortgage()">
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+            <div class="budget-kpi"><div class="budget-kpi-label">Monthly P&I</div><div class="budget-kpi-value" id="calcMonthlyPI" style="color:var(--accent)">$0</div></div>
+            <div class="budget-kpi"><div class="budget-kpi-label">Total Monthly</div><div class="budget-kpi-value" id="calcMonthlyTotal" style="color:var(--green)">$0</div></div>
+            <div class="budget-kpi negative"><div class="budget-kpi-label">Total Interest</div><div class="budget-kpi-value" id="calcTotalInterest">$0</div></div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+            <div class="budget-kpi"><div class="budget-kpi-label">Loan Amount</div><div class="budget-kpi-value" id="calcLoanAmt" style="font-size:16px">$0</div></div>
+            <div class="budget-kpi"><div class="budget-kpi-label">Down Payment %</div><div class="budget-kpi-value" id="calcDownPct" style="font-size:16px">0%</div></div>
+            <div class="budget-kpi"><div class="budget-kpi-label">Total Cost</div><div class="budget-kpi-value" id="calcTotalCost" style="font-size:16px">$0</div></div>
+          </div>
+
+          <div class="panel-title" style="margin-top:16px;cursor:pointer" onclick="document.getElementById('calcAmortTable').style.display = document.getElementById('calcAmortTable').style.display === 'none' ? 'block' : 'none'">Amortization Schedule ▼</div>
+          <div id="calcAmortTable" style="display:none;max-height:400px;overflow-y:auto;font-size:11px;margin-top:8px">
+            <table style="width:100%;border-collapse:collapse">
+              <thead><tr style="border-bottom:1px solid var(--border);color:var(--text-dim)">
+                <th style="padding:6px 4px;text-align:left">Year</th>
+                <th style="padding:6px 4px;text-align:right">Payment</th>
+                <th style="padding:6px 4px;text-align:right">Principal</th>
+                <th style="padding:6px 4px;text-align:right">Interest</th>
+                <th style="padding:6px 4px;text-align:right">Balance</th>
+              </tr></thead>
+              <tbody id="calcAmortBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top:14px">
+          <div class="panel-title">Simple Interest Calculator</div>
+          <div class="page-sub" style="margin-bottom:14px">Quick interest calculation on any loan or investment.</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+            <div>
+              <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Principal ($)</label>
+              <input class="input-field" type="number" id="siPrincipal" value="10000" oninput="calcSimpleInterest()">
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Annual Rate (%)</label>
+              <input class="input-field" type="number" id="siRate" value="5" step="0.1" oninput="calcSimpleInterest()">
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Period (years)</label>
+              <input class="input-field" type="number" id="siYears" value="5" oninput="calcSimpleInterest()">
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+            <div class="budget-kpi"><div class="budget-kpi-label">Monthly Payment</div><div class="budget-kpi-value" id="siMonthly" style="color:var(--accent)">$0</div></div>
+            <div class="budget-kpi negative"><div class="budget-kpi-label">Total Interest</div><div class="budget-kpi-value" id="siTotalInterest">$0</div></div>
+            <div class="budget-kpi"><div class="budget-kpi-label">Total Repaid</div><div class="budget-kpi-value" id="siTotalRepaid">$0</div></div>
+          </div>
         </div>
       </div>
     </div>
@@ -3303,15 +3463,9 @@ function ico(name, size, color) {
 
   <div class="filter-bar" style="margin-bottom:14px">
     <select id="researchFilterCat" class="input-field" style="max-width:150px;padding:8px 10px;font-size:12px" onchange="renderResearch()">
-      <option value="">All Categories</option>
-      <option value="Technology">Technology</option>
-      <option value="Finance">Finance</option>
-      <option value="Health">Health</option>
-      <option value="Business">Business</option>
-      <option value="Science">Science</option>
-      <option value="Personal">Personal</option>
-      <option value="Other">Other</option>
+      <!-- populated dynamically by populateResearchCatDropdowns() -->
     </select>
+    <button class="btn btn-sm" onclick="openManageResearchCats()" title="Manage categories" style="padding:6px 10px;font-size:11px">⚙ Categories</button>
     <select id="researchFilterStatus" class="input-field" style="max-width:130px;padding:8px 10px;font-size:12px" onchange="renderResearch()">
       <option value="">All Status</option>
       <option value="New">New</option>
@@ -3327,13 +3481,7 @@ function ico(name, size, color) {
       <div style="display:flex;gap:8px;margin-bottom:8px">
         <input class="input-field" id="researchNewTitle" placeholder="Research topic..." style="flex:1">
         <select id="researchNewCat" class="input-field" style="max-width:140px;padding:10px 8px">
-          <option value="Technology">Technology</option>
-          <option value="Finance">Finance</option>
-          <option value="Health">Health</option>
-          <option value="Business">Business</option>
-          <option value="Science">Science</option>
-          <option value="Personal">Personal</option>
-          <option value="Other">Other</option>
+          <!-- populated dynamically by populateResearchCatDropdowns() -->
         </select>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:8px">
@@ -3358,6 +3506,21 @@ function ico(name, size, color) {
   </div>
 
   <div id="researchList"></div>
+
+  <!-- Manage Categories Modal -->
+  <div id="researchCatModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center">
+    <div style="background:var(--card);border-radius:14px;padding:20px;width:340px;max-height:80vh;overflow-y:auto;border:1px solid var(--glass-border);box-shadow:0 8px 32px rgba(0,0,0,0.4)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="font-size:15px;font-weight:700">Manage Categories</div>
+        <button onclick="closeManageResearchCats()" style="background:none;border:none;color:var(--text-dim);font-size:18px;cursor:pointer">✕</button>
+      </div>
+      <div id="researchCatList" style="margin-bottom:12px"></div>
+      <div style="display:flex;gap:6px">
+        <input class="input-field" id="researchNewCatName" placeholder="New category name..." style="flex:1;padding:8px 10px;font-size:12px" onkeydown="if(event.key==='Enter')addResearchCat()">
+        <button class="btn btn-primary" onclick="addResearchCat()" style="padding:8px 14px;font-size:12px">+ Add</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ========== BUSINESS/PRODUCT IDEAS PAGE ========== -->
@@ -3930,6 +4093,8 @@ function reloadAllData() {
   groceryList = getData('groceryList', []);
   wishList = getData('wishList', []);
   gratitudeLog = getData('gratitudeLog', {});
+  captureQueue = getData('captureQueue', []);
+  researchCategories = getData('researchCategories', DEFAULT_RESEARCH_CATS);
   renderAll();
   loadFormFields();
   renderJournal();
@@ -3960,6 +4125,7 @@ function renderAll() {
   safe('renderWeeklyGoalDashboard', renderWeeklyGoalDashboard);
   safe('renderResearch', renderResearch);
   safe('renderBizIdeas', renderBizIdeas);
+  safe('renderQueue', renderQueue);
   safe('updateDashboard', updateDashboard);
   safe('updateBadges', updateBadges);
   safe('renderHotButtons-final', renderHotButtons);
@@ -4636,6 +4802,75 @@ function deleteTask(i) {
   tasks.splice(i, 1);
   saveTasks(); renderTasks(); updateDashboard(); updateBadges();
 }
+
+// ===== STALE TASK CHECK (60-day prompt, re-trigger every 7 days) =====
+let staleDismissals = getData('staleDismissals', {}); // { taskId: lastDismissedDate }
+
+function checkStaleTasks() {
+  const banner = document.getElementById('staleTaskBanner');
+  if (!banner) return;
+  const stale = tasks.filter(t => {
+    if (t.done || !t.created) return false;
+    const age = Math.floor((new Date(TODAY + 'T12:00:00') - new Date(t.created + 'T12:00:00')) / 86400000);
+    if (age < 60) return false;
+    // Check if dismissed recently (within 7 days)
+    const dismissed = staleDismissals[t.id];
+    if (dismissed) {
+      const daysSinceDismiss = Math.floor((new Date(TODAY + 'T12:00:00') - new Date(dismissed + 'T12:00:00')) / 86400000);
+      if (daysSinceDismiss < 7) return false;
+    }
+    return true;
+  });
+
+  if (stale.length === 0) { banner.style.display = 'none'; return; }
+  banner.style.display = 'block';
+  document.getElementById('staleTaskCount').textContent = stale.length + ' task' + (stale.length !== 1 ? 's' : '') + ' older than 60 days';
+  let html = '';
+  stale.forEach(t => {
+    const idx = tasks.indexOf(t);
+    const age = Math.floor((new Date(TODAY + 'T12:00:00') - new Date(t.created + 'T12:00:00')) / 86400000);
+    html += `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border)">`;
+    html += `<span style="flex:1;color:var(--text)">${esc(t.text)}</span>`;
+    html += `<span style="color:var(--text-muted);font-size:10px;white-space:nowrap">${age}d old</span>`;
+    html += `<button onclick="staleKeep(${t.id})" style="background:var(--bg2);border:1px solid var(--border);border-radius:4px;color:var(--text-dim);font-size:10px;padding:3px 8px;cursor:pointer">Keep</button>`;
+    html += `<button onclick="staleDelete(${idx})" style="background:rgba(217,48,37,0.12);border:none;border-radius:4px;color:var(--red);font-size:10px;padding:3px 8px;cursor:pointer">Delete</button>`;
+    html += `</div>`;
+  });
+  document.getElementById('staleTaskList').innerHTML = html;
+}
+
+function staleKeep(taskId) {
+  staleDismissals[taskId] = TODAY;
+  setData('staleDismissals', staleDismissals);
+  checkStaleTasks();
+  showToast('Task kept — will ask again in 7 days');
+}
+
+function staleDelete(idx) {
+  const t = tasks[idx];
+  if (t) { delete staleDismissals[t.id]; }
+  tasks.splice(idx, 1);
+  saveTasks();
+  setData('staleDismissals', staleDismissals);
+  checkStaleTasks();
+  renderTasks(); updateDashboard(); updateBadges();
+  showToast('Stale task deleted');
+}
+
+function dismissAllStaleTasks() {
+  tasks.forEach(t => {
+    if (!t.done && t.created) {
+      const age = Math.floor((new Date(TODAY + 'T12:00:00') - new Date(t.created + 'T12:00:00')) / 86400000);
+      if (age >= 60) staleDismissals[t.id] = TODAY;
+    }
+  });
+  setData('staleDismissals', staleDismissals);
+  checkStaleTasks();
+  showToast('All stale tasks kept — revisit in 7 days');
+}
+
+// Run stale check after initial render
+setTimeout(() => checkStaleTasks(), 500);
 
 function toggleFrog(i) {
   const wasActive = tasks[i].isFrog;
@@ -8026,6 +8261,94 @@ function saveExpenses() {
   setData('monthlyExpenses', monthlyExpenses);
   renderDebts(); updateDashboard();
 }
+
+// ===== MORTGAGE & INTEREST CALCULATOR =====
+function calcMortgage() {
+  const price = parseFloat(document.getElementById('calcHomePrice').value) || 0;
+  const down = parseFloat(document.getElementById('calcDownPayment').value) || 0;
+  const rateAnnual = parseFloat(document.getElementById('calcRate').value) || 0;
+  const termYears = parseInt(document.getElementById('calcTerm').value) || 30;
+  const taxRate = parseFloat(document.getElementById('calcTax').value) || 0;
+  const insurance = parseFloat(document.getElementById('calcInsurance').value) || 0;
+
+  const loan = price - down;
+  const monthlyRate = rateAnnual / 100 / 12;
+  const numPayments = termYears * 12;
+  const fmt = n => '$' + n.toLocaleString(undefined, {maximumFractionDigits: 0});
+
+  let monthlyPI = 0;
+  if (monthlyRate > 0 && numPayments > 0) {
+    monthlyPI = loan * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / (Math.pow(1 + monthlyRate, numPayments) - 1);
+  } else if (numPayments > 0) {
+    monthlyPI = loan / numPayments;
+  }
+
+  const monthlyTax = (price * taxRate / 100) / 12;
+  const monthlyIns = insurance / 12;
+  const monthlyTotal = monthlyPI + monthlyTax + monthlyIns;
+  const totalPaid = monthlyPI * numPayments;
+  const totalInterest = totalPaid - loan;
+  const downPct = price > 0 ? Math.round((down / price) * 100) : 0;
+
+  document.getElementById('calcMonthlyPI').textContent = fmt(monthlyPI);
+  document.getElementById('calcMonthlyTotal').textContent = fmt(monthlyTotal);
+  document.getElementById('calcTotalInterest').textContent = fmt(totalInterest);
+  document.getElementById('calcLoanAmt').textContent = fmt(loan);
+  document.getElementById('calcDownPct').textContent = downPct + '%';
+  document.getElementById('calcTotalCost').textContent = fmt(totalPaid + down);
+
+  // Amortization schedule (yearly)
+  const tbody = document.getElementById('calcAmortBody');
+  if (!tbody) return;
+  let balance = loan;
+  let html = '';
+  for (let year = 1; year <= termYears; year++) {
+    let yearPrincipal = 0, yearInterest = 0, yearPayment = 0;
+    for (let m = 0; m < 12; m++) {
+      if (balance <= 0) break;
+      const intPmt = balance * monthlyRate;
+      const prinPmt = Math.min(monthlyPI - intPmt, balance);
+      yearInterest += intPmt;
+      yearPrincipal += prinPmt;
+      yearPayment += monthlyPI;
+      balance -= prinPmt;
+    }
+    if (balance < 0) balance = 0;
+    html += `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:5px 4px">${year}</td>
+      <td style="padding:5px 4px;text-align:right">${fmt(yearPayment)}</td>
+      <td style="padding:5px 4px;text-align:right;color:var(--green)">${fmt(yearPrincipal)}</td>
+      <td style="padding:5px 4px;text-align:right;color:var(--red)">${fmt(yearInterest)}</td>
+      <td style="padding:5px 4px;text-align:right">${fmt(balance)}</td>
+    </tr>`;
+  }
+  tbody.innerHTML = html;
+}
+
+function calcSimpleInterest() {
+  const principal = parseFloat(document.getElementById('siPrincipal').value) || 0;
+  const rate = parseFloat(document.getElementById('siRate').value) || 0;
+  const years = parseFloat(document.getElementById('siYears').value) || 0;
+  const fmt = n => '$' + n.toLocaleString(undefined, {maximumFractionDigits: 0});
+
+  const monthlyRate = rate / 100 / 12;
+  const numPayments = years * 12;
+  let monthlyPmt = 0;
+  if (monthlyRate > 0 && numPayments > 0) {
+    monthlyPmt = principal * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / (Math.pow(1 + monthlyRate, numPayments) - 1);
+  } else if (numPayments > 0) {
+    monthlyPmt = principal / numPayments;
+  }
+  const totalRepaid = monthlyPmt * numPayments;
+  const totalInterest = totalRepaid - principal;
+
+  document.getElementById('siMonthly').textContent = fmt(monthlyPmt);
+  document.getElementById('siTotalInterest').textContent = fmt(totalInterest);
+  document.getElementById('siTotalRepaid').textContent = fmt(totalRepaid);
+}
+
+// Initialize calculators
+setTimeout(() => { calcMortgage(); calcSimpleInterest(); }, 100);
 
 const debouncedSaveIncome = debounce(saveIncome, 1500);
 const debouncedSaveExpenses = debounce(saveExpenses, 1500);
@@ -13572,6 +13895,263 @@ function crmGetMessageTemplates(contact, firstName) {
   return templates;
 }
 
+// ===== CAPTURE QUEUE =====
+let captureQueue = getData('captureQueue', []);
+let queueFilter = 'all';
+
+function setQueueFilter(cat) {
+  queueFilter = cat;
+  document.querySelectorAll('.queue-tab').forEach(t => t.classList.toggle('active', t.dataset.qcat === cat));
+  renderQueue();
+}
+
+function renderQueue() {
+  const list = document.getElementById('queueList');
+  if (!list) return;
+  const pending = captureQueue.filter(i => !i.done);
+
+  // KPIs
+  const el = id => { const e = document.getElementById(id); if (e) e.textContent = '0'; return e; };
+  const totalEl = document.getElementById('queueKpiTotal');
+  const todoEl = document.getElementById('queueKpiTodo');
+  const ideasEl = document.getElementById('queueKpiIdeas');
+  const grocEl = document.getElementById('queueKpiGroceries');
+  const wishEl = document.getElementById('queueKpiWishlist');
+  if (totalEl) totalEl.textContent = pending.length;
+  if (todoEl) todoEl.textContent = pending.filter(i => i.category === 'todo').length;
+  if (ideasEl) ideasEl.textContent = pending.filter(i => i.category === 'ideas').length;
+  if (grocEl) grocEl.textContent = pending.filter(i => i.category === 'groceries').length;
+  if (wishEl) wishEl.textContent = pending.filter(i => i.category === 'wishlist').length;
+
+  // Tab counts
+  document.querySelectorAll('.queue-tab').forEach(tab => {
+    const cat = tab.dataset.qcat;
+    if (cat === 'all') return;
+    const count = pending.filter(i => i.category === cat).length;
+    let badge = tab.querySelector('.q-count');
+    if (count > 0) {
+      if (!badge) { badge = document.createElement('span'); badge.className = 'q-count'; tab.appendChild(badge); }
+      badge.textContent = count;
+    } else if (badge) { badge.remove(); }
+  });
+
+  // Badge
+  const navBadge = document.getElementById('navQueueBadge');
+  if (navBadge) { navBadge.textContent = pending.length; navBadge.style.display = pending.length > 0 ? '' : 'none'; }
+
+  // Filter
+  const filtered = queueFilter === 'all' ? pending : pending.filter(i => i.category === queueFilter);
+
+  if (filtered.length === 0) {
+    const msg = pending.length === 0
+      ? 'No items in the capture queue.<br>Items captured on mobile will appear here for enrichment.'
+      : 'No ' + queueFilter + ' items in the queue.';
+    list.innerHTML = '<div class="queue-empty"><div class="queue-empty-icon">📥</div><div class="queue-empty-text">' + msg + '</div></div>';
+    return;
+  }
+
+  // Sort: fire items first, then by created date desc
+  filtered.sort((a, b) => {
+    if (a.fire && !b.fire) return -1;
+    if (!a.fire && b.fire) return 1;
+    return b.id - a.id;
+  });
+
+  const catLabels = { todo: 'To Do', ideas: 'Idea', groceries: 'Grocery', wishlist: 'Wish List' };
+  let html = '';
+  filtered.forEach(item => {
+    const fireClass = item.fire ? ' fire' : '';
+    const timeStr = item.createdTime ? item.createdTime : '';
+    const dateStr = item.created === TODAY ? 'Today' : (item.created || '');
+    html += `<div class="queue-card${fireClass}" id="qitem_${item.id}">`;
+    html += `<div class="queue-card-header">`;
+    if (item.fire) html += `<span style="font-size:16px">🔥</span>`;
+    html += `<div class="queue-card-text">${esc(item.text)}</div>`;
+    html += `<span class="queue-card-cat ${item.category}">${catLabels[item.category] || item.category}</span>`;
+    html += `</div>`;
+    html += `<div style="display:flex;align-items:center;justify-content:space-between">`;
+    html += `<span class="queue-card-time">${dateStr} ${timeStr}</span>`;
+    html += `<div style="display:flex;gap:6px">`;
+
+    if (item.category === 'todo') {
+      html += `<button class="queue-btn expand" onclick="toggleQueueEnrich(${item.id})">Enrich & Save</button>`;
+    } else if (item.category === 'groceries') {
+      html += `<button class="queue-btn save" onclick="queueSaveGrocery(${item.id})">→ Grocery List</button>`;
+    } else if (item.category === 'wishlist') {
+      html += `<button class="queue-btn save" onclick="queueSaveWishlist(${item.id})">→ Wish List</button>`;
+    } else if (item.category === 'ideas') {
+      html += `<button class="queue-btn save" onclick="queueSaveIdea(${item.id})">→ Ideas</button>`;
+    }
+    html += `<button class="queue-btn delete" onclick="queueDelete(${item.id})">✕</button>`;
+    html += `</div></div>`;
+
+    // Enrichment form (only for To Do items)
+    if (item.category === 'todo') {
+      html += `<div class="queue-enrich" id="qenrich_${item.id}">`;
+      html += `<div class="form-row">`;
+      html += `<select id="qTag_${item.id}"><option value="personal">Personal</option><option value="finance">Finance</option><option value="health">Health</option><option value="business">Business</option><option value="sidehustle">Side Hustle</option></select>`;
+      html += `<select id="qPri_${item.id}"><option value="p2">P2 — Should Do</option><option value="p0">🔥 Critical</option><option value="p1">P1 — Must Do</option><option value="p3">P3 — Nice To Do</option></select>`;
+      html += `<input type="date" id="qDue_${item.id}" style="max-width:150px">`;
+      html += `</div>`;
+      html += `<div class="form-row">`;
+      html += `<select id="qProject_${item.id}" style="max-width:200px"><option value="">— No Project —</option></select>`;
+      html += `<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim);cursor:pointer"><input type="checkbox" id="qHard_${item.id}" style="width:14px;height:14px;accent-color:#ff4444"> Hard Deadline</label>`;
+      html += `</div>`;
+      html += `<div class="queue-actions">`;
+      html += `<button class="queue-btn save" onclick="queueSaveTask(${item.id})">Save as Task</button>`;
+      html += `<button class="queue-btn delete" onclick="queueDelete(${item.id})">Discard</button>`;
+      html += `</div>`;
+      html += `</div>`;
+    }
+
+    html += `</div>`;
+  });
+  list.innerHTML = html;
+
+  // Populate project dropdowns
+  filtered.forEach(item => {
+    if (item.category === 'todo') {
+      const sel = document.getElementById('qProject_' + item.id);
+      if (sel && typeof pmProjects !== 'undefined') {
+        pmProjects.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.name; opt.textContent = p.name;
+          sel.appendChild(opt);
+        });
+      }
+    }
+  });
+}
+
+function toggleQueueEnrich(id) {
+  const el = document.getElementById('qenrich_' + id);
+  if (el) el.classList.toggle('open');
+}
+
+function queueSaveTask(id) {
+  const item = captureQueue.find(i => i.id === id);
+  if (!item) return;
+  const tag = document.getElementById('qTag_' + id).value;
+  const priority = document.getElementById('qPri_' + id).value;
+  const due = document.getElementById('qDue_' + id).value;
+  const project = document.getElementById('qProject_' + id).value;
+  const hardDeadline = document.getElementById('qHard_' + id).checked;
+
+  // Create task in allTasks
+  const newTask = {
+    id: Date.now(),
+    text: item.text,
+    tag: tag,
+    priority: item.fire ? 'p0' : priority,
+    due: due,
+    project: project,
+    hardDeadline: hardDeadline || false,
+    recur: '',
+    isFrog: false,
+    is8020: false,
+    chainId: '',
+    chainOrder: 0,
+    chainTotal: 0,
+    done: false,
+    created: TODAY,
+    completed: ''
+  };
+  tasks.push(newTask);
+  setData('allTasks', tasks);
+
+  // Sync to PM if project assigned
+  if (project && typeof pmProjects !== 'undefined') {
+    const proj = pmProjects.find(p => p.name.toLowerCase() === project.toLowerCase());
+    if (proj) {
+      if (!proj.tasks) proj.tasks = [];
+      proj.tasks.push({
+        id: Date.now() + 1,
+        syncId: 'sync_' + newTask.id,
+        text: newTask.text,
+        done: false,
+        created: TODAY
+      });
+      proj.lastTouched = TODAY;
+      setData('pmProjects', pmProjects);
+    }
+  }
+
+  // Remove from queue
+  captureQueue = captureQueue.filter(i => i.id !== id);
+  setData('captureQueue', captureQueue);
+  renderQueue();
+  renderTasks();
+  showToast('✓ Saved as task');
+}
+
+function queueSaveGrocery(id) {
+  const item = captureQueue.find(i => i.id === id);
+  if (!item) return;
+  if (typeof groceryList === 'undefined') { showToast('Grocery list not available'); return; }
+  groceryList.push({ id: Date.now(), text: item.text, done: false, created: TODAY });
+  setData('groceryList', groceryList);
+  captureQueue = captureQueue.filter(i => i.id !== id);
+  setData('captureQueue', captureQueue);
+  renderQueue();
+  if (typeof renderGroceries === 'function') renderGroceries();
+  showToast('✓ Added to groceries');
+}
+
+function queueSaveWishlist(id) {
+  const item = captureQueue.find(i => i.id === id);
+  if (!item) return;
+  if (typeof wishList === 'undefined') { showToast('Wish list not available'); return; }
+  wishList.push({ id: Date.now(), text: item.text, done: false, created: TODAY, link: '', price: '' });
+  setData('wishList', wishList);
+  captureQueue = captureQueue.filter(i => i.id !== id);
+  setData('captureQueue', captureQueue);
+  renderQueue();
+  if (typeof renderWishList === 'function') renderWishList();
+  showToast('✓ Added to wish list');
+}
+
+function queueSaveIdea(id) {
+  const item = captureQueue.find(i => i.id === id);
+  if (!item) return;
+  // Save to research ideas (will be expanded in Task #45 with categories)
+  const ri = getData('researchIdeas', []);
+  ri.push({ id: Date.now(), text: item.text, category: 'general', status: 'new', notes: '', created: TODAY });
+  setData('researchIdeas', ri);
+  // Update in-memory if already loaded
+  if (typeof researchIdeas !== 'undefined') { researchIdeas.length = 0; ri.forEach(x => researchIdeas.push(x)); }
+  captureQueue = captureQueue.filter(i => i.id !== id);
+  setData('captureQueue', captureQueue);
+  renderQueue();
+  if (typeof renderResearch === 'function') renderResearch();
+  showToast('✓ Saved to ideas');
+}
+
+function queueDelete(id) {
+  captureQueue = captureQueue.filter(i => i.id !== id);
+  setData('captureQueue', captureQueue);
+  renderQueue();
+  showToast('Item removed');
+}
+
+// Quick-save all: one-click save for groceries/wishlist items
+function queueSaveAllCategory(cat) {
+  const items = captureQueue.filter(i => i.category === cat && !i.done);
+  if (items.length === 0) return;
+  items.forEach(item => {
+    if (cat === 'groceries') {
+      groceryList.push({ id: Date.now() + Math.random(), text: item.text, done: false, created: TODAY });
+    } else if (cat === 'wishlist') {
+      wishList.push({ id: Date.now() + Math.random(), text: item.text, done: false, created: TODAY, link: '', price: '' });
+    }
+  });
+  if (cat === 'groceries') setData('groceryList', groceryList);
+  if (cat === 'wishlist') setData('wishList', wishList);
+  captureQueue = captureQueue.filter(i => !(i.category === cat && !i.done));
+  setData('captureQueue', captureQueue);
+  renderQueue();
+  showToast('✓ All ' + cat + ' items saved');
+}
+
 // ===== GROCERY LIST =====
 let groceryList = getData('groceryList', []);
 
@@ -14121,7 +14701,7 @@ function researchResetForm() {
   document.getElementById('researchNewTitle').value = '';
   document.getElementById('researchNewLinks').value = '';
   document.getElementById('researchNewNotes').value = '';
-  document.getElementById('researchNewCat').value = 'Technology';
+  document.getElementById('researchNewCat').value = researchCategories[0] || 'General';
   document.getElementById('researchNewStatus').value = 'New';
   document.getElementById('researchNewPriority').value = 'Medium';
 }
@@ -14180,7 +14760,7 @@ function researchEdit(id) {
   researchEditingId = id;
   // Populate form fields with existing values
   document.getElementById('researchNewTitle').value = r.title || '';
-  document.getElementById('researchNewCat').value = r.category || 'Technology';
+  document.getElementById('researchNewCat').value = r.category || 'General';
   document.getElementById('researchNewStatus').value = r.status || 'New';
   document.getElementById('researchNewPriority').value = r.priority || 'Medium';
   document.getElementById('researchNewLinks').value = r.links || '';
@@ -14246,6 +14826,90 @@ function renderResearch() {
     </div>`;
   }).join('');
 }
+
+// ===== RESEARCH CATEGORY MANAGEMENT =====
+const DEFAULT_RESEARCH_CATS = ['General', 'Technology', 'Finance', 'Health', 'Business', 'Science', 'Personal', 'Groceries', 'Wish List', 'Other'];
+let researchCategories = getData('researchCategories', DEFAULT_RESEARCH_CATS);
+
+function populateResearchCatDropdowns() {
+  const cats = researchCategories;
+  // Filter dropdown
+  const filterSel = document.getElementById('researchFilterCat');
+  if (filterSel) {
+    const curVal = filterSel.value;
+    filterSel.innerHTML = '<option value="">All Categories</option>';
+    cats.forEach(c => { const opt = document.createElement('option'); opt.value = c; opt.textContent = c; filterSel.appendChild(opt); });
+    filterSel.value = curVal;
+  }
+  // Form dropdown
+  const formSel = document.getElementById('researchNewCat');
+  if (formSel) {
+    const curVal = formSel.value;
+    formSel.innerHTML = '';
+    cats.forEach(c => { const opt = document.createElement('option'); opt.value = c; opt.textContent = c; formSel.appendChild(opt); });
+    if (curVal && cats.includes(curVal)) formSel.value = curVal;
+  }
+}
+
+function openManageResearchCats() {
+  const modal = document.getElementById('researchCatModal');
+  if (modal) { modal.style.display = 'flex'; renderResearchCatList(); }
+}
+
+function closeManageResearchCats() {
+  const modal = document.getElementById('researchCatModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function renderResearchCatList() {
+  const container = document.getElementById('researchCatList');
+  if (!container) return;
+  let html = '';
+  researchCategories.forEach((cat, idx) => {
+    const inUse = researchIdeas.some(r => r.category === cat);
+    html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--bg2);border-radius:6px;margin-bottom:4px">`;
+    html += `<span style="font-size:13px">${cat}</span>`;
+    if (!inUse) {
+      html += `<button onclick="deleteResearchCat(${idx})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:2px 6px" title="Delete">✕</button>`;
+    } else {
+      html += `<span style="font-size:10px;color:var(--text-muted)">in use</span>`;
+    }
+    html += `</div>`;
+  });
+  container.innerHTML = html;
+}
+
+function addResearchCat() {
+  const input = document.getElementById('researchNewCatName');
+  const name = input.value.trim();
+  if (!name) return;
+  if (researchCategories.some(c => c.toLowerCase() === name.toLowerCase())) {
+    showToast('Category already exists');
+    return;
+  }
+  researchCategories.push(name);
+  setData('researchCategories', researchCategories);
+  input.value = '';
+  renderResearchCatList();
+  populateResearchCatDropdowns();
+  showToast('+ Category added');
+}
+
+function deleteResearchCat(idx) {
+  const cat = researchCategories[idx];
+  if (researchIdeas.some(r => r.category === cat)) {
+    showToast('Cannot delete — category is in use');
+    return;
+  }
+  researchCategories.splice(idx, 1);
+  setData('researchCategories', researchCategories);
+  renderResearchCatList();
+  populateResearchCatDropdowns();
+  showToast('Category removed');
+}
+
+// Initialize dropdowns on load
+populateResearchCatDropdowns();
 
 // ===== BUSINESS / PRODUCT IDEAS =====
 let bizIdeas = getData('bizIdeas', []);
@@ -18795,3 +19459,4 @@ setTimeout(_navApplyCollapsed, 80);
 </script>
 </body>
 </html>
+
