@@ -13978,92 +13978,134 @@ function renderQueue() {
     html += `<button class="queue-btn delete" onclick="queueDelete(${item.id})">✕</button>`;
     html += `</div></div>`;
 
-    // Enrichment form — full form matching destination section
+    // Enrichment form — exact replica of destination add forms
     html += `<div class="queue-enrich" id="qenrich_${item.id}">`;
 
     // Category reassignment (all items)
-    html += `<div class="form-row"><label style="font-size:12px;color:var(--text-dim);white-space:nowrap">Category:</label>`;
-    html += `<select id="qCat_${item.id}" onchange="queueReassign(${item.id}, this.value)" style="max-width:160px">`;
+    html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)">`;
+    html += `<label style="font-size:12px;color:var(--text-dim);white-space:nowrap;font-weight:600">Destination:</label>`;
+    html += `<select id="qCat_${item.id}" onchange="queueReassign(${item.id}, this.value)" style="padding:8px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px">`;
     ['todo','ideas','groceries','wishlist'].forEach(c => {
       html += `<option value="${c}"${item.category === c ? ' selected' : ''}>${catLabels[c]}</option>`;
     });
     html += `</select></div>`;
 
-    // === TO DO enrichment ===
+    // === TO DO — exact replica of .add-task-form ===
+    const et = item.enrich || {};
     html += `<div id="qform_todo_${item.id}" style="display:${item.category === 'todo' ? 'block' : 'none'}">`;
+    html += `<div class="add-task-form" style="border-top:none;margin-top:0;padding-top:0">`;
     html += `<div class="form-row">`;
-    html += `<input class="input-field" id="qText_${item.id}" value="${esc(item.text)}" placeholder="Task text..." style="flex:1">`;
-    html += `</div>`;
-    html += `<div class="form-row">`;
-    html += `<select id="qTag_${item.id}"><option value="personal">Personal</option><option value="finance">Finance</option><option value="health">Health</option><option value="business">Business</option><option value="sidehustle">Side Hustle</option></select>`;
-    html += `<select id="qPri_${item.id}"><option value="p2">P2 — Should Do</option><option value="p0">🔥 Critical</option><option value="p1">P1 — Must Do</option><option value="p3">P3 — Nice To Do</option></select>`;
-    html += `<input type="date" id="qDue_${item.id}" class="input-field" style="max-width:160px">`;
+    html += `<input class="input-field" id="qText_${item.id}" value="${esc(item.text)}" placeholder="Task text...">`;
     html += `</div>`;
     html += `<div class="form-row">`;
-    html += `<select id="qProject_${item.id}" style="max-width:200px"><option value="">— No Project —</option></select>`;
-    html += `<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim);cursor:pointer"><input type="checkbox" id="qHard_${item.id}" style="width:14px;height:14px;accent-color:#ff4444"> Hard Deadline</label>`;
-    html += `<select id="qRecur_${item.id}" style="max-width:150px"><option value="">No Repeat</option><option value="daily">Daily</option><option value="weekdays">Weekdays (M-F)</option><option value="weekly">Weekly</option><option value="biweekly">Every 2 Weeks</option><option value="monthly">Monthly</option></select>`;
+    html += `<select id="qTag_${item.id}">`;
+    ['personal','finance','health','business','sidehustle'].forEach(t => {
+      const labels = {personal:'Personal',finance:'Finance',health:'Health',business:'Business',sidehustle:'Side Hustle'};
+      html += `<option value="${t}"${et.tag === t ? ' selected' : ''}>${labels[t]}</option>`;
+    });
+    html += `</select>`;
+    html += `<select id="qPri_${item.id}">`;
+    const defPri = et.priority || (item.fire ? 'p0' : 'p2');
+    [['p2','P2 — Should Do'],['p0','🔥 Critical'],['p1','P1 — Must Do'],['p3','P3 — Nice To Do']].forEach(([v,l]) => {
+      html += `<option value="${v}"${defPri === v ? ' selected' : ''}>${l}</option>`;
+    });
+    html += `</select>`;
+    html += `<input type="date" id="qDue_${item.id}" class="input-field" style="max-width:160px" value="${et.due||''}">`;
+    // Use _pmBuildProjectSelect for the full smart project dropdown
+    html += (typeof _pmBuildProjectSelect === 'function') ? _pmBuildProjectSelect('qProject_' + item.id, et.project||'', 'max-width:200px;') : `<select id="qProject_${item.id}" style="max-width:200px;padding:10px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:Inter,sans-serif" onchange="_pmDropdownChange(this)"><option value="">— No Project —</option></select>`;
     html += `</div>`;
-    html += `<div class="queue-actions"><button class="queue-btn save" onclick="queueSaveTask(${item.id})">Save as Task</button><button class="queue-btn delete" onclick="queueDelete(${item.id})">Discard</button></div>`;
+    html += `<div class="form-row">`;
+    html += `<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim);cursor:pointer;flex-shrink:0">`;
+    html += `<input type="checkbox" id="qHard_${item.id}" ${et.hardDeadline ? 'checked ' : ''}style="width:14px;height:14px;accent-color:#ff4444"> Hard Deadline`;
+    html += `</label>`;
+    html += `<select id="qRecur_${item.id}" style="padding:10px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:'Inter',sans-serif">`;
+    [['','No Repeat'],['daily','Daily'],['weekdays','Weekdays (M-F)'],['weekly','Weekly'],['biweekly','Every 2 Weeks'],['monthly','Monthly']].forEach(([v,l]) => {
+      html += `<option value="${v}"${(et.recur||'') === v ? ' selected' : ''}>${l}</option>`;
+    });
+    html += `</select>`;
+    html += `<button class="btn btn-primary" onclick="queueSaveTask(${item.id})" style="flex:0 0 auto">Save as Task</button>`;
+    html += `<button class="btn" onclick="queueHold(${item.id})" style="background:var(--bg2);border:1px solid var(--accent);color:var(--accent);flex:0 0 auto">Save &amp; Hold</button>`;
+    html += `<button class="btn btn-sm" onclick="queueDelete(${item.id})" style="background:var(--bg2);border:1px solid var(--border);color:var(--red);font-size:12px;flex:0 0 auto">Discard</button>`;
     html += `</div>`;
+    html += `</div></div>`;
 
-    // === GROCERY enrichment ===
+    // === GROCERY — exact replica of .groc-input-row ===
+    const eg = item.enrich || {};
     html += `<div id="qform_groceries_${item.id}" style="display:${item.category === 'groceries' ? 'block' : 'none'}">`;
-    html += `<div class="form-row">`;
-    html += `<input class="input-field" id="qGrocName_${item.id}" value="${esc(item.text)}" placeholder="Item name..." style="flex:1">`;
-    html += `<input class="input-field" id="qGrocQty_${item.id}" placeholder="Qty" style="max-width:70px">`;
-    html += `<select id="qGrocCat_${item.id}" style="max-width:140px">`;
-    html += `<option value="produce">Produce</option><option value="dairy">Dairy</option><option value="meat">Meat</option><option value="bakery">Bakery</option><option value="frozen">Frozen</option><option value="pantry">Pantry</option><option value="drinks">Drinks</option><option value="snacks">Snacks</option><option value="household">Household</option><option value="other">Other</option>`;
-    html += `</select></div>`;
-    html += `<div class="queue-actions"><button class="queue-btn save" onclick="queueSaveGrocery(${item.id})">Save to Grocery List</button><button class="queue-btn delete" onclick="queueDelete(${item.id})">Discard</button></div>`;
-    html += `</div>`;
+    html += `<div class="groc-input-row" style="margin-bottom:8px">`;
+    html += `<input class="input-field" id="qGrocName_${item.id}" value="${esc(item.text)}" placeholder="Add item...">`;
+    html += `<input class="input-field" id="qGrocQty_${item.id}" placeholder="Qty" value="${esc(eg.qty||'')}" style="max-width:70px">`;
+    html += `<select id="qGrocCat_${item.id}" class="input-field" style="max-width:140px;padding:10px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px">`;
+    ['produce','dairy','meat','bakery','frozen','pantry','drinks','snacks','household','other'].forEach(c => {
+      const labels = {produce:'Produce',dairy:'Dairy',meat:'Meat',bakery:'Bakery',frozen:'Frozen',pantry:'Pantry',drinks:'Drinks',snacks:'Snacks',household:'Household',other:'Other'};
+      html += `<option value="${c}"${(eg.grocCategory||'produce') === c ? ' selected' : ''}>${labels[c]}</option>`;
+    });
+    html += `</select>`;
+    html += `<button class="btn btn-primary" onclick="queueSaveGrocery(${item.id})">Save to Groceries</button>`;
+    html += `<button class="btn" onclick="queueHold(${item.id})" style="background:var(--bg2);border:1px solid var(--accent);color:var(--accent)">Save &amp; Hold</button>`;
+    html += `<button class="btn btn-sm" onclick="queueDelete(${item.id})" style="background:var(--bg2);border:1px solid var(--border);color:var(--red);font-size:12px">Discard</button>`;
+    html += `</div></div>`;
 
-    // === WISH LIST enrichment ===
+    // === WISH LIST — exact replica of .wish-input-form ===
+    const ew = item.enrich || {};
     html += `<div id="qform_wishlist_${item.id}" style="display:${item.category === 'wishlist' ? 'block' : 'none'}">`;
-    html += `<div class="form-row">`;
-    html += `<input class="input-field" id="qWishName_${item.id}" value="${esc(item.text)}" placeholder="Item name..." style="flex:1">`;
-    html += `<input class="input-field" id="qWishCost_${item.id}" placeholder="Cost ($)" type="number" style="max-width:110px">`;
+    html += `<div class="wish-input-form" style="margin-bottom:0">`;
+    html += `<div class="wish-form-row">`;
+    html += `<input class="input-field" id="qWishName_${item.id}" value="${esc(item.text)}" placeholder="Item name" style="flex:1">`;
+    html += `<input class="input-field" id="qWishCost_${item.id}" placeholder="Cost ($)" type="number" value="${esc(ew.cost||'')}" style="max-width:110px">`;
     html += `</div>`;
-    html += `<div class="form-row">`;
-    html += `<input class="input-field" id="qWishNotes_${item.id}" placeholder="Link, notes, details..." style="flex:1">`;
-    html += `<select id="qWishPri_${item.id}" style="max-width:120px"><option value="med">Medium</option><option value="high">High</option><option value="low">Low</option></select>`;
+    html += `<div class="wish-form-row">`;
+    html += `<input class="input-field" id="qWishNotes_${item.id}" placeholder="Link, notes, details..." value="${esc(ew.notes||'')}" style="flex:1">`;
+    html += `<select id="qWishPri_${item.id}" class="input-field" style="max-width:120px;padding:10px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px">`;
+    [['med','Medium'],['high','High'],['low','Low']].forEach(([v,l]) => {
+      html += `<option value="${v}"${(ew.priority||'med') === v ? ' selected' : ''}>${l}</option>`;
+    });
+    html += `</select>`;
     html += `</div>`;
-    html += `<div class="queue-actions"><button class="queue-btn save" onclick="queueSaveWishlist(${item.id})">Save to Wish List</button><button class="queue-btn delete" onclick="queueDelete(${item.id})">Discard</button></div>`;
+    html += `<div class="wish-form-row">`;
+    html += `<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);cursor:pointer">`;
+    html += `<input type="file" id="qWishImg_${item.id}" accept="image/*" style="font-size:11px;max-width:220px"> Image (optional)`;
+    html += `</label>`;
+    html += `<button class="btn btn-primary" onclick="queueSaveWishlist(${item.id})" style="margin-left:auto">Save to Wish List</button>`;
+    html += `<button class="btn" onclick="queueHold(${item.id})" style="background:var(--bg2);border:1px solid var(--accent);color:var(--accent);margin-left:6px">Save &amp; Hold</button>`;
+    html += `<button class="btn" onclick="queueDelete(${item.id})" style="background:var(--bg2);border:1px solid var(--border);color:var(--red);margin-left:6px">Discard</button>`;
     html += `</div>`;
+    html += `</div></div>`;
 
-    // === IDEAS enrichment ===
+    // === IDEAS — exact replica of #researchForm ===
     const rcats = (typeof researchCategories !== 'undefined') ? researchCategories : ['General','Technology','Finance','Health','Business','Science','Personal','Other'];
+    const ei = item.enrich || {};
     html += `<div id="qform_ideas_${item.id}" style="display:${item.category === 'ideas' ? 'block' : 'none'}">`;
-    html += `<div class="form-row">`;
+    html += `<div style="display:flex;gap:8px;margin-bottom:8px">`;
     html += `<input class="input-field" id="qIdeaTitle_${item.id}" value="${esc(item.text)}" placeholder="Research topic..." style="flex:1">`;
-    html += `<select id="qIdeaCat_${item.id}" style="max-width:140px">`;
-    rcats.forEach(c => { html += `<option value="${c}">${c}</option>`; });
+    html += `<select id="qIdeaCat_${item.id}" class="input-field" style="max-width:140px;padding:10px 8px">`;
+    rcats.forEach(c => { html += `<option value="${c}"${(ei.ideaCategory||'General') === c ? ' selected' : ''}>${c}</option>`; });
     html += `</select></div>`;
-    html += `<div class="form-row">`;
-    html += `<select id="qIdeaStatus_${item.id}" style="max-width:130px"><option value="New">New</option><option value="In Progress">In Progress</option><option value="Done">Done</option></select>`;
-    html += `<select id="qIdeaPri_${item.id}" style="max-width:120px"><option value="Medium">Medium</option><option value="High">High</option><option value="Low">Low</option></select>`;
-    html += `<input class="input-field" id="qIdeaLinks_${item.id}" placeholder="Links (URLs)..." style="flex:1">`;
+    html += `<div style="display:flex;gap:8px;margin-bottom:8px">`;
+    html += `<select id="qIdeaStatus_${item.id}" class="input-field" style="max-width:130px;padding:10px 8px">`;
+    [['New','New'],['In Progress','In Progress'],['Done','Done']].forEach(([v,l]) => {
+      html += `<option value="${v}"${(ei.status||'New') === v ? ' selected' : ''}>${l}</option>`;
+    });
+    html += `</select>`;
+    html += `<select id="qIdeaPri_${item.id}" class="input-field" style="max-width:120px;padding:10px 8px">`;
+    [['Medium','Medium'],['High','High'],['Low','Low']].forEach(([v,l]) => {
+      html += `<option value="${v}"${(ei.priority||'Medium') === v ? ' selected' : ''}>${l}</option>`;
+    });
+    html += `</select>`;
+    html += `<input class="input-field" id="qIdeaLinks_${item.id}" placeholder="Links (URLs)..." value="${esc(ei.links||'')}" style="flex:1">`;
     html += `</div>`;
-    html += `<textarea class="input-field" id="qIdeaNotes_${item.id}" placeholder="Notes, context, why this matters..." style="min-height:60px;margin-bottom:8px"></textarea>`;
-    html += `<div class="queue-actions"><button class="queue-btn save" onclick="queueSaveIdea(${item.id})">Save to Ideas</button><button class="queue-btn delete" onclick="queueDelete(${item.id})">Discard</button></div>`;
+    html += `<textarea class="input-field" id="qIdeaNotes_${item.id}" placeholder="Notes, context, why this matters..." style="min-height:70px;margin-bottom:8px">${esc(ei.notes||'')}</textarea>`;
+    html += `<div style="display:flex;gap:8px">`;
+    html += `<button class="btn btn-primary" onclick="queueSaveIdea(${item.id})">Save to Ideas</button>`;
+    html += `<button class="btn" onclick="queueHold(${item.id})" style="background:var(--bg2);border:1px solid var(--accent);color:var(--accent)">Save &amp; Hold</button>`;
+    html += `<button class="btn" onclick="queueDelete(${item.id})" style="background:var(--bg2);border:1px solid var(--border);color:var(--red)">Discard</button>`;
+    html += `</div>`;
     html += `</div>`;
 
     html += `</div>`; // close queue-enrich
     html += `</div>`; // close queue-card
   });
   list.innerHTML = html;
-
-  // Populate project dropdowns for To Do items
-  filtered.forEach(item => {
-    const sel = document.getElementById('qProject_' + item.id);
-    if (sel && typeof pmProjects !== 'undefined') {
-      pmProjects.forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p.name; opt.textContent = p.name;
-        sel.appendChild(opt);
-      });
-    }
-  });
 }
 
 function toggleQueueEnrich(id) {
@@ -14081,6 +14123,42 @@ function queueReassign(id, newCat) {
     const form = document.getElementById('qform_' + c + '_' + id);
     if (form) form.style.display = c === newCat ? 'block' : 'none';
   });
+}
+
+function queueHold(id) {
+  const item = captureQueue.find(i => i.id === id);
+  if (!item) return;
+  // Read category reassignment
+  const catEl = document.getElementById('qCat_' + id);
+  if (catEl) item.category = catEl.value;
+  const cat = item.category;
+
+  // Save enrichment data based on current category
+  if (cat === 'todo') {
+    const v = f => { const el = document.getElementById(f + id); return el ? el.value : ''; };
+    const c = f => { const el = document.getElementById(f + id); return el ? el.checked : false; };
+    item.text = v('qText_') || item.text;
+    item.enrich = { tag: v('qTag_'), priority: v('qPri_'), due: v('qDue_'), project: v('qProject_'), hardDeadline: c('qHard_'), recur: v('qRecur_') };
+  } else if (cat === 'groceries') {
+    const v = f => { const el = document.getElementById(f + id); return el ? el.value : ''; };
+    item.text = v('qGrocName_') || item.text;
+    item.enrich = { qty: v('qGrocQty_'), grocCategory: v('qGrocCat_') };
+  } else if (cat === 'wishlist') {
+    const v = f => { const el = document.getElementById(f + id); return el ? el.value : ''; };
+    item.text = v('qWishName_') || item.text;
+    item.enrich = { cost: v('qWishCost_'), notes: v('qWishNotes_'), priority: v('qWishPri_') };
+  } else if (cat === 'ideas') {
+    const v = f => { const el = document.getElementById(f + id); return el ? el.value : ''; };
+    item.text = v('qIdeaTitle_') || item.text;
+    item.enrich = { ideaCategory: v('qIdeaCat_'), status: v('qIdeaStatus_'), priority: v('qIdeaPri_'), links: v('qIdeaLinks_'), notes: v('qIdeaNotes_') };
+  }
+
+  setData('captureQueue', captureQueue);
+  // Collapse the enrichment panel
+  const el = document.getElementById('qenrich_' + id);
+  if (el) el.classList.remove('open');
+  renderQueue();
+  showToast('✓ Saved — still in queue');
 }
 
 function queueSaveTask(id) {
@@ -14155,21 +14233,33 @@ function queueSaveWishlist(id) {
   const costEl = document.getElementById('qWishCost_' + id);
   const notesEl = document.getElementById('qWishNotes_' + id);
   const priEl = document.getElementById('qWishPri_' + id);
-  wishList.push({
-    id: Date.now(),
-    name: nameEl ? nameEl.value.trim() || item.text : item.text,
-    cost: costEl ? costEl.value : 0,
-    notes: notesEl ? notesEl.value.trim() : '',
-    priority: priEl ? priEl.value : 'med',
-    image: '',
-    created: TODAY
-  });
-  setData('wishList', wishList);
-  captureQueue = captureQueue.filter(i => i.id !== id);
-  setData('captureQueue', captureQueue);
-  renderQueue();
-  if (typeof renderWishList === 'function') renderWishList();
-  showToast('✓ Added to wish list');
+  const imgEl = document.getElementById('qWishImg_' + id);
+
+  const doSave = (imageData) => {
+    wishList.push({
+      id: Date.now(),
+      name: nameEl ? nameEl.value.trim() || item.text : item.text,
+      cost: costEl ? costEl.value : 0,
+      notes: notesEl ? notesEl.value.trim() : '',
+      priority: priEl ? priEl.value : 'med',
+      image: imageData || '',
+      created: TODAY
+    });
+    setData('wishList', wishList);
+    captureQueue = captureQueue.filter(i => i.id !== id);
+    setData('captureQueue', captureQueue);
+    renderQueue();
+    if (typeof renderWishList === 'function') renderWishList();
+    showToast('✓ Added to wish list');
+  };
+
+  if (imgEl && imgEl.files && imgEl.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function(e) { doSave(e.target.result); };
+    reader.readAsDataURL(imgEl.files[0]);
+  } else {
+    doSave('');
+  }
 }
 
 function queueSaveIdea(id) {

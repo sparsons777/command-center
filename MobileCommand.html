@@ -44,155 +44,143 @@ body {
   display:flex; align-items:center; justify-content:space-between;
   padding:12px 16px 8px; flex-shrink:0;
 }
+.top-bar-left { display:flex; align-items:center; gap:10px; }
+.top-bar-back {
+  display:none; width:32px; height:32px; border-radius:50%;
+  background:rgba(255,255,255,0.06); border:none; cursor:pointer;
+  color:var(--text); font-size:18px;
+  align-items:center; justify-content:center;
+}
+.top-bar-back.visible { display:flex; }
 .top-bar-title { font-size:17px; font-weight:600; }
 .top-bar-date { font-size:12px; color:var(--text-dim); }
 .top-bar-sync { width:8px; height:8px; border-radius:50%; background:var(--green); flex-shrink:0; }
 .top-bar-sync.offline { background:var(--red); }
 
-/* ===== BOTTOM TAB BAR ===== */
-.tab-bar {
-  display:flex; flex-shrink:0;
-  background:var(--bg2); border-top:1px solid var(--border);
-  padding:6px 0 calc(6px + env(safe-area-inset-bottom));
-}
-.tab-item {
-  flex:1; display:flex; flex-direction:column; align-items:center;
-  gap:2px; padding:6px 0; cursor:pointer; color:var(--text-dim);
-  font-size:10px; transition:color 0.2s;
-}
-.tab-item.active { color:var(--accent); }
-.tab-item svg { width:22px; height:22px; }
-
 /* ===== PAGES ===== */
 .page { display:none; flex:1; overflow:hidden; flex-direction:column; }
 .page.active { display:flex; }
 
-/* ===== CAPTURE TAB: CATEGORY TABS ===== */
-.cat-tabs {
-  display:flex; overflow-x:auto; flex-shrink:0;
-  gap:0; border-bottom:1px solid var(--border);
-  -webkit-overflow-scrolling:touch; scrollbar-width:none;
+/* ===== HOME SCREEN ===== */
+.home-grid {
+  flex:1; display:grid; grid-template-columns:1fr 1fr;
+  gap:14px; padding:20px 16px; align-content:start;
 }
-.cat-tabs::-webkit-scrollbar { display:none; }
-.cat-tab {
-  flex-shrink:0; padding:10px 16px; font-size:13px; font-weight:500;
-  color:var(--text-dim); cursor:pointer; white-space:nowrap;
-  border-bottom:2px solid transparent; transition:all 0.2s;
+.home-box {
+  background:var(--card); border:1px solid var(--border); border-radius:16px;
+  padding:24px 16px; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:10px;
+  cursor:pointer; transition:transform 0.15s, background 0.2s;
+  min-height:140px;
 }
-.cat-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
-.cat-tab .cat-count {
-  display:inline-block; background:rgba(255,255,255,0.08); border-radius:8px;
-  padding:1px 6px; font-size:10px; margin-left:4px; color:var(--text-dim);
+.home-box:active { transform:scale(0.96); background:var(--bg3); }
+.home-box-icon { font-size:36px; }
+.home-box-label { font-size:15px; font-weight:600; text-align:center; }
+.home-box-count {
+  font-size:12px; color:var(--text-dim); margin-top:-4px;
 }
+.home-box.quickadd { border-color:var(--accent); }
+.home-box.quickadd .home-box-icon { filter:drop-shadow(0 0 8px rgba(232,185,49,0.3)); }
+.home-box.queue .home-box-count { color:var(--orange); font-weight:600; }
 
-/* ===== CAPTURE LIST ===== */
-.capture-list {
-  flex:1; overflow-y:auto; padding:0;
-  -webkit-overflow-scrolling:touch;
+/* ===== QUICK ADD PAGE ===== */
+.quick-add-area {
+  flex:1; display:flex; flex-direction:column;
+  padding:16px; gap:12px;
 }
-.capture-item {
+.quick-add-textarea {
+  flex:1; background:var(--bg2); border:1px solid var(--border);
+  border-radius:12px; padding:16px; color:var(--text);
+  font-size:16px; font-family:inherit; resize:none; outline:none;
+  min-height:120px;
+}
+.quick-add-textarea::placeholder { color:var(--text-muted); }
+.quick-add-btns {
+  display:flex; gap:10px; align-items:center; justify-content:flex-end;
+}
+.qa-mic-btn {
+  width:48px; height:48px; border-radius:50%; border:none;
+  background:rgba(255,255,255,0.06); cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  color:var(--text-dim); font-size:22px; transition:all 0.2s;
+}
+.qa-mic-btn.recording { background:var(--red); color:#fff; animation:pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+.qa-save-btn {
+  flex:1; max-width:200px; background:var(--accent); color:#000; border:none;
+  border-radius:12px; padding:14px 24px; font-size:16px; font-weight:700;
+  cursor:pointer; font-family:inherit; transition:opacity 0.2s;
+}
+.qa-save-btn:active { opacity:0.8; }
+
+/* ===== QUEUE PAGE ===== */
+.queue-list { flex:1; overflow-y:auto; padding:0 0 20px; -webkit-overflow-scrolling:touch; }
+.q-item {
   display:flex; align-items:center; gap:12px;
   padding:14px 16px; border-bottom:1px solid var(--border);
-  transition:transform 0.2s, opacity 0.2s;
 }
-.capture-item.completing { transform:translateX(60px); opacity:0; }
-.capture-check {
-  width:22px; height:22px; border-radius:50%; border:2px solid var(--text-muted);
+.q-complete {
+  width:24px; height:24px; border-radius:50%; border:2px solid var(--text-muted);
   flex-shrink:0; cursor:pointer; display:flex; align-items:center; justify-content:center;
   transition:all 0.2s;
 }
-.capture-check.done { background:var(--green); border-color:var(--green); }
-.capture-check.done::after { content:'✓'; color:#fff; font-size:12px; }
-.capture-text { flex:1; font-size:14px; line-height:1.4; }
-.capture-text.done { text-decoration:line-through; opacity:0.4; }
-.capture-fire {
-  width:28px; height:28px; display:flex; align-items:center; justify-content:center;
-  cursor:pointer; font-size:16px; opacity:0.25; transition:opacity 0.2s;
+.q-complete:active { border-color:var(--red); background:rgba(217,48,37,0.15); }
+.q-body { flex:1; min-width:0; }
+.q-text { font-size:14px; line-height:1.4; }
+.q-meta { font-size:11px; color:var(--text-dim); margin-top:3px; }
+.q-meta-tag {
+  display:inline-block; padding:1px 6px; border-radius:4px;
+  background:rgba(255,255,255,0.06); margin-right:4px;
 }
-.capture-fire.lit { opacity:1; }
-.capture-edit {
-  width:28px; height:28px; display:flex; align-items:center; justify-content:center;
-  cursor:pointer; font-size:14px; opacity:0.3; transition:opacity 0.2s;
+.q-edit {
+  width:32px; height:32px; display:flex; align-items:center; justify-content:center;
+  cursor:pointer; font-size:15px; opacity:0.35; transition:opacity 0.2s;
+  border-radius:8px;
 }
-.capture-item:hover .capture-edit, .capture-item:active .capture-edit { opacity:0.7; }
-.capture-edit-panel {
-  display:none; padding:10px 16px 12px; background:var(--bg2);
+.q-edit:active { opacity:0.8; background:rgba(255,255,255,0.06); }
+
+/* Queue edit panel */
+.q-edit-panel {
+  display:none; padding:10px 16px 14px; background:var(--bg2);
   border-bottom:1px solid var(--border);
 }
-.capture-edit-panel.open { display:block; }
-.ce-input {
-  width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px;
+.q-edit-panel.open { display:block; }
+.qe-input {
+  width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px;
   background:var(--bg); color:var(--text); font-size:14px; margin-bottom:8px;
-  font-family:inherit; box-sizing:border-box;
-}
-.ce-row { display:flex; gap:8px; align-items:center; }
-.ce-label { font-size:12px; color:var(--text-muted); white-space:nowrap; }
-.ce-select {
-  flex:1; padding:6px 8px; border:1px solid var(--border); border-radius:6px;
-  background:var(--bg); color:var(--text); font-size:13px;
-}
-.ce-save {
-  padding:6px 14px; background:var(--orange); color:#fff; border:none;
-  border-radius:6px; font-size:13px; font-weight:600; cursor:pointer;
-}
-.capture-delete {
-  font-size:18px; color:var(--text-muted); cursor:pointer; padding:4px;
-  opacity:0; transition:opacity 0.2s;
-}
-.capture-item:hover .capture-delete, .capture-item:active .capture-delete { opacity:0.6; }
-
-/* Task items in capture To Do view (from desktop) */
-.desktop-task-item {
-  display:flex; align-items:flex-start; gap:12px;
-  padding:12px 16px; border-bottom:1px solid var(--border);
-  background:rgba(255,255,255,0.02);
-}
-.dt-meta { display:flex; gap:6px; flex-wrap:wrap; margin-top:4px; }
-.dt-tag {
-  font-size:10px; padding:2px 6px; border-radius:4px;
-  background:rgba(255,255,255,0.06); color:var(--text-dim);
-}
-.dt-score { font-size:10px; font-weight:600; }
-.dt-score.defcon { color:var(--red); }
-.dt-score.high { color:var(--orange); }
-
-/* ===== CAPTURE INPUT BAR ===== */
-.capture-input-bar {
-  flex-shrink:0; border-top:1px solid var(--border);
-  background:var(--bg2); padding:10px 12px;
-}
-.capture-input-row {
-  display:flex; align-items:center; gap:8px;
-}
-.capture-input {
-  flex:1; background:var(--bg3); border:1px solid var(--border);
-  border-radius:20px; padding:10px 16px; color:var(--text);
-  font-size:14px; font-family:inherit; outline:none;
-}
-.capture-input::placeholder { color:var(--text-muted); }
-.capture-fire-btn {
-  width:36px; height:36px; border-radius:50%; border:none;
-  background:transparent; cursor:pointer; font-size:18px;
-  display:flex; align-items:center; justify-content:center;
-  opacity:0.35; transition:opacity 0.2s;
-}
-.capture-fire-btn.lit { opacity:1; }
-.capture-mic-btn {
-  width:36px; height:36px; border-radius:50%; border:none;
-  background:rgba(255,255,255,0.06); cursor:pointer;
-  display:flex; align-items:center; justify-content:center;
-  color:var(--text-dim); font-size:16px; transition:all 0.2s;
-}
-.capture-mic-btn.recording { background:var(--red); color:#fff; animation:pulse 1s infinite; }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
-.capture-save-btn {
-  background:var(--accent); color:#000; border:none; border-radius:20px;
-  padding:10px 18px; font-size:13px; font-weight:600; cursor:pointer;
   font-family:inherit;
 }
-.capture-save-btn:active { opacity:0.8; }
+.qe-row { display:flex; gap:8px; align-items:center; }
+.qe-label { font-size:12px; color:var(--text-muted); white-space:nowrap; }
+.qe-select {
+  flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:8px;
+  background:var(--bg); color:var(--text); font-size:13px;
+}
+.qe-save {
+  padding:8px 16px; background:var(--accent); color:#000; border:none;
+  border-radius:8px; font-size:13px; font-weight:600; cursor:pointer;
+}
 
-/* ===== TASK PAGE (view/complete only) ===== */
+/* Confirm delete popup */
+.confirm-popup {
+  position:fixed; top:0; left:0; right:0; bottom:0; z-index:100;
+  background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center;
+}
+.confirm-box {
+  background:var(--bg2); border:1px solid var(--border); border-radius:16px;
+  padding:24px; max-width:300px; width:90%; text-align:center;
+}
+.confirm-box p { font-size:14px; margin-bottom:4px; }
+.confirm-box .item-text { font-size:13px; color:var(--text-dim); margin-bottom:16px; }
+.confirm-btns { display:flex; gap:10px; justify-content:center; }
+.confirm-btns button {
+  flex:1; padding:10px; border-radius:10px; border:none;
+  font-size:14px; font-weight:600; cursor:pointer; font-family:inherit;
+}
+.confirm-cancel { background:var(--bg3); color:var(--text); }
+.confirm-delete { background:var(--red); color:#fff; }
+
+/* ===== TASK PAGE ===== */
 .task-summary { display:flex; gap:10px; padding:12px 16px; flex-shrink:0; }
 .task-summary-card {
   flex:1; background:var(--card); border-radius:10px; padding:10px;
@@ -240,6 +228,9 @@ body {
 .task-due.overdue { color:var(--red); font-weight:600; }
 .task-score { font-weight:600; }
 .task-fire { font-size:14px; flex-shrink:0; margin-top:2px; }
+.dt-score { font-weight:600; }
+.dt-score.defcon { color:var(--red); }
+.dt-score.high { color:var(--orange); }
 
 /* ===== WTD PAGE ===== */
 .wtd-score-bar {
@@ -262,7 +253,7 @@ body {
   display:flex; align-items:center; justify-content:center;
 }
 .wtd-check.done { background:var(--green); border-color:var(--green); }
-.wtd-check.done::after { content:'✓'; color:#fff; font-size:11px; }
+.wtd-check.done::after { content:'\2713'; color:#fff; font-size:11px; }
 .wtd-check.na { background:var(--bg3); border-color:var(--text-muted); opacity:0.4; }
 .wtd-body { flex:1; }
 .wtd-text { font-size:14px; }
@@ -278,49 +269,68 @@ body {
 
 /* ===== TOAST ===== */
 .toast {
-  position:fixed; bottom:80px; left:50%; transform:translateX(-50%) translateY(20px);
+  position:fixed; bottom:40px; left:50%; transform:translateX(-50%) translateY(20px);
   background:var(--card); color:var(--text); padding:10px 20px;
   border-radius:20px; font-size:13px; opacity:0; transition:all 0.3s;
   pointer-events:none; border:1px solid var(--border); z-index:999;
 }
 .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
-
-/* Section separator */
-.section-sep {
-  padding:8px 16px; font-size:11px; color:var(--text-muted);
-  font-weight:600; text-transform:uppercase; letter-spacing:0.5px;
-  background:var(--bg2);
-}
 </style>
 </head>
 <body>
 
 <!-- ===== TOP BAR ===== -->
 <div class="top-bar">
-  <div>
-    <div class="top-bar-title">Mobile Command</div>
-    <div class="top-bar-date" id="topDate"></div>
+  <div class="top-bar-left">
+    <button class="top-bar-back" id="backBtn" onclick="goHome()">&#8592;</button>
+    <div>
+      <div class="top-bar-title" id="pageTitle">Mobile Command</div>
+      <div class="top-bar-date" id="topDate"></div>
+    </div>
   </div>
   <div class="top-bar-sync" id="syncIndicator"></div>
 </div>
 
-<!-- ===== PAGE: CAPTURE ===== -->
-<div class="page active" id="page-capture">
-  <div class="cat-tabs" id="catTabs">
-    <div class="cat-tab active" data-cat="todo" onclick="switchCat('todo')">To Do</div>
-    <div class="cat-tab" data-cat="ideas" onclick="switchCat('ideas')">Ideas</div>
-    <div class="cat-tab" data-cat="groceries" onclick="switchCat('groceries')">Groceries</div>
-    <div class="cat-tab" data-cat="wishlist" onclick="switchCat('wishlist')">Wish List</div>
-  </div>
-  <div class="capture-list" id="captureList"></div>
-  <div class="capture-input-bar">
-    <div class="capture-input-row">
-      <input class="capture-input" id="captureInput" placeholder="New item..." autocomplete="off">
-      <button class="capture-fire-btn" id="captureFireBtn" onclick="toggleCaptureFire()">🔥</button>
-      <button class="capture-mic-btn" id="captureMicBtn" onclick="startVoice()">🎤</button>
-      <button class="capture-save-btn" onclick="addCaptureItem()">Save</button>
+<!-- ===== PAGE: HOME ===== -->
+<div class="page active" id="page-home">
+  <div class="home-grid">
+    <div class="home-box quickadd" onclick="goTo('quickadd')">
+      <div class="home-box-icon">&#9889;</div>
+      <div class="home-box-label">Quick Add</div>
+      <div class="home-box-count">Capture anything</div>
+    </div>
+    <div class="home-box queue" onclick="goTo('queue')">
+      <div class="home-box-icon">&#128229;</div>
+      <div class="home-box-label">Queue</div>
+      <div class="home-box-count" id="homeQueueCount">0 items</div>
+    </div>
+    <div class="home-box" onclick="goTo('tasks')">
+      <div class="home-box-icon">&#9745;</div>
+      <div class="home-box-label">Tasks</div>
+      <div class="home-box-count" id="homeTaskCount">0 open</div>
+    </div>
+    <div class="home-box" onclick="goTo('wtd')">
+      <div class="home-box-icon">&#127942;</div>
+      <div class="home-box-label">Win The Day</div>
+      <div class="home-box-count" id="homeWtdScore">0%</div>
     </div>
   </div>
+</div>
+
+<!-- ===== PAGE: QUICK ADD ===== -->
+<div class="page" id="page-quickadd">
+  <div class="quick-add-area">
+    <textarea class="quick-add-textarea" id="qaInput" placeholder="What's on your mind? Task, idea, grocery item, anything..." rows="5"></textarea>
+    <div class="quick-add-btns">
+      <button class="qa-mic-btn" id="qaMicBtn" onclick="startVoice()">&#127908;</button>
+      <button class="qa-save-btn" onclick="quickAdd()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PAGE: QUEUE ===== -->
+<div class="page" id="page-queue">
+  <div class="queue-list" id="queueList"></div>
 </div>
 
 <!-- ===== PAGE: TASKS ===== -->
@@ -354,19 +364,15 @@ body {
   <div class="wtd-list" id="wtdList"></div>
 </div>
 
-<!-- ===== BOTTOM TAB BAR ===== -->
-<div class="tab-bar">
-  <div class="tab-item active" onclick="switchPage('capture')" id="tabCapture">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-    <div>Capture</div>
-  </div>
-  <div class="tab-item" onclick="switchPage('tasks')" id="tabTasks">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-    <div>Tasks</div>
-  </div>
-  <div class="tab-item" onclick="switchPage('wtd')" id="tabWtd">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
-    <div>Win The Day</div>
+<!-- ===== CONFIRM POPUP (hidden) ===== -->
+<div class="confirm-popup" id="confirmPopup" style="display:none" onclick="closeConfirm(event)">
+  <div class="confirm-box" onclick="event.stopPropagation()">
+    <p>Remove this item?</p>
+    <div class="item-text" id="confirmText"></div>
+    <div class="confirm-btns">
+      <button class="confirm-cancel" onclick="closeConfirm()">Cancel</button>
+      <button class="confirm-delete" id="confirmDeleteBtn">Delete</button>
+    </div>
   </div>
 </div>
 
@@ -458,196 +464,70 @@ function reloadData() {
   document.getElementById('topDate').textContent = days[d.getDay()] + ', ' + months[d.getMonth()] + ' ' + d.getDate();
 })();
 
-// ===== PAGE & TAB SWITCHING =====
-let currentPage = 'capture';
-function switchPage(page) {
+// ===== NAVIGATION =====
+let currentPage = 'home';
+const pageTitles = { home:'Mobile Command', quickadd:'Quick Add', queue:'Queue', tasks:'Tasks', wtd:'Win The Day' };
+
+function goTo(page) {
   currentPage = page;
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
   document.getElementById('page-' + page).classList.add('active');
-  document.getElementById('tab' + page.charAt(0).toUpperCase() + page.slice(1)).classList.add('active');
-  if (page === 'capture') renderCapture();
+  document.getElementById('pageTitle').textContent = pageTitles[page] || 'Mobile Command';
+  document.getElementById('backBtn').classList.toggle('visible', page !== 'home');
+  if (page === 'quickadd') { setTimeout(() => document.getElementById('qaInput').focus(), 100); }
+  else if (page === 'queue') renderQueue();
   else if (page === 'tasks') renderTasks();
   else if (page === 'wtd') renderWtd();
+  else if (page === 'home') updateHomeCounts();
 }
 
-// ===== CAPTURE SYSTEM =====
-let currentCat = 'todo';
-let captureFire = false;
+function goHome() { goTo('home'); }
 
-function switchCat(cat) {
-  currentCat = cat;
-  document.querySelectorAll('.cat-tab').forEach(t => {
-    t.classList.toggle('active', t.dataset.cat === cat);
-  });
-  // Update placeholder
-  const placeholders = { todo:'New task...', ideas:'New idea...', groceries:'Add item...', wishlist:'Add to wish list...' };
-  document.getElementById('captureInput').placeholder = placeholders[cat] || 'New item...';
-  renderCapture();
+// ===== HOME COUNTS =====
+function updateHomeCounts() {
+  const qCount = captureQueue.filter(i => !i.done).length;
+  document.getElementById('homeQueueCount').textContent = qCount + ' item' + (qCount !== 1 ? 's' : '');
+  const tOpen = tasks.filter(t => !t.done).length;
+  document.getElementById('homeTaskCount').textContent = tOpen + ' open';
+  const score = getWtdScore();
+  document.getElementById('homeWtdScore').textContent = score.pct + '%';
 }
 
-function toggleCaptureFire() {
-  captureFire = !captureFire;
-  document.getElementById('captureFireBtn').classList.toggle('lit', captureFire);
-}
-
-function addCaptureItem() {
-  const input = document.getElementById('captureInput');
+// ===== QUICK ADD =====
+function quickAdd() {
+  const input = document.getElementById('qaInput');
   const text = input.value.trim();
   if (!text) return;
-  captureQueue.push({
-    id: Date.now(),
-    text: text,
-    category: currentCat,
-    fire: captureFire,
-    done: false,
-    created: TODAY,
-    createdTime: new Date().toTimeString().slice(0,5)
+  // Support multiple lines — each line becomes a separate item
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+  lines.forEach(line => {
+    captureQueue.push({
+      id: Date.now() + Math.floor(Math.random() * 1000),
+      text: line,
+      category: 'todo',
+      fire: false,
+      done: false,
+      created: TODAY,
+      createdTime: new Date().toTimeString().slice(0,5)
+    });
   });
   setData('captureQueue', captureQueue);
   input.value = '';
-  captureFire = false;
-  document.getElementById('captureFireBtn').classList.remove('lit');
-  renderCapture();
-  showToast('+ Captured');
+  showToast('+ ' + lines.length + ' item' + (lines.length > 1 ? 's' : '') + ' captured');
+  // Stay on Quick Add for rapid entry
 }
 
-function toggleCaptureFire_item(id) {
-  const item = captureQueue.find(i => i.id === id);
-  if (!item) return;
-  item.fire = !item.fire;
-  setData('captureQueue', captureQueue);
-  renderCapture();
-}
-
-function deleteCaptureItem(id) {
-  captureQueue = captureQueue.filter(i => i.id !== id);
-  setData('captureQueue', captureQueue);
-  renderCapture();
-}
-
-function toggleCaptureEdit(id) {
-  const el = document.getElementById('cedit_' + id);
-  if (el) el.classList.toggle('open');
-}
-
-function saveCaptureEdit(id) {
-  const item = captureQueue.find(i => i.id === id);
-  if (!item) return;
-  const textEl = document.getElementById('ceText_' + id);
-  const catEl = document.getElementById('ceCat_' + id);
-  if (textEl && textEl.value.trim()) item.text = textEl.value.trim();
-  if (catEl) item.category = catEl.value;
-  setData('captureQueue', captureQueue);
-  renderCapture();
-  showToast('Updated');
-}
-
-function buildCaptureItemHtml(item) {
-  const catLabels = {todo:'To Do', ideas:'Idea', groceries:'Grocery', wishlist:'Wish List'};
-  let h = '<div class="capture-item" id="cap_'+item.id+'">';
-  h += '<div class="capture-check" onclick="deleteCaptureItem('+item.id+')"></div>';
-  h += '<div class="capture-text">' + esc(item.text) + '</div>';
-  h += '<div class="capture-edit" onclick="toggleCaptureEdit('+item.id+')" title="Edit">✏️</div>';
-  h += '<div class="capture-fire' + (item.fire ? ' lit' : '') + '" onclick="toggleCaptureFire_item('+item.id+')">🔥</div>';
-  h += '</div>';
-  // Expandable edit panel
-  h += '<div class="capture-edit-panel" id="cedit_'+item.id+'">';
-  h += '<input class="ce-input" id="ceText_'+item.id+'" value="'+esc(item.text)+'">';
-  h += '<div class="ce-row">';
-  h += '<label class="ce-label">Category:</label>';
-  h += '<select class="ce-select" id="ceCat_'+item.id+'">';
-  ['todo','ideas','groceries','wishlist'].forEach(c => {
-    h += '<option value="'+c+'"'+(item.category===c?' selected':'')+'>'+catLabels[c]+'</option>';
-  });
-  h += '</select>';
-  h += '<button class="ce-save" onclick="saveCaptureEdit('+item.id+')">Save</button>';
-  h += '</div></div>';
-  return h;
-}
-
-function renderCapture() {
-  const list = document.getElementById('captureList');
-  const catItems = captureQueue.filter(i => i.category === currentCat && !i.done);
-
-  // Update tab counts
-  const cats = ['todo','ideas','groceries','wishlist'];
-  cats.forEach(cat => {
-    const tab = document.querySelector('.cat-tab[data-cat="'+cat+'"]');
-    const count = captureQueue.filter(i => i.category === cat && !i.done).length;
-    const existing = tab.querySelector('.cat-count');
-    if (count > 0) {
-      if (existing) existing.textContent = count;
-      else tab.innerHTML = tab.textContent.replace(/\s*\d+\s*$/, '') + '<span class="cat-count">' + count + '</span>';
-    } else if (existing) {
-      existing.remove();
-    }
-  });
-
-  let html = '';
-
-  // For "To Do" tab, show queue items first, then desktop tasks below
-  if (currentCat === 'todo') {
-    if (catItems.length > 0) {
-      html += '<div class="section-sep">Queued — awaiting review</div>';
-      catItems.forEach(item => { html += buildCaptureItemHtml(item); });
-    }
-
-    const fireItems = captureQueue.filter(i => i.fire && !i.done);
-    if (fireItems.length > 0 && catItems.length === 0) {
-      // Show fire section if no todo items
-    }
-
-    const openTasks = tasks.filter(t => !t.done);
-    if (openTasks.length > 0) {
-      const sorted = openTasks.sort((a,b) => scoreTask(b) - scoreTask(a)).slice(0, 20);
-      html += '<div class="section-sep">Active Tasks (' + openTasks.length + ')</div>';
-      sorted.forEach(t => {
-        const score = scoreTask(t);
-        const scoreClass = getScoreLabel(score);
-        const priLabels = {p0:'CRIT', p1:'P1', p2:'P2', p3:'P3'};
-        const isOverdue = t.due && t.due < TODAY;
-        html += '<div class="task-card" id="task_'+t.id+'">';
-        html += '<div class="task-check' + (t.done ? ' done' : '') + '" onclick="toggleTask('+t.id+')"></div>';
-        if (t.priority === 'p0') html += '<div class="task-fire">🔥</div>';
-        html += '<div class="task-body">';
-        html += '<div class="task-text">' + esc(t.text) + '</div>';
-        html += '<div class="task-meta">';
-        html += '<span class="task-tag tag-'+(t.tag||'personal')+'">' + (t.tag||'personal') + '</span>';
-        html += '<span class="task-pri pri-'+(t.priority||'p2')+'">' + (priLabels[t.priority]||'P2') + '</span>';
-        if (t.due) html += '<span class="task-due'+(isOverdue?' overdue':'')+'">' + (isOverdue?'⚠ ':'') + formatDate(t.due) + '</span>';
-        html += '<span class="dt-score '+scoreClass+'">'+score+'pts</span>';
-        html += '</div></div></div>';
-      });
-    }
-  } else {
-    if (catItems.length === 0) {
-      html += '<div class="empty-state"><div class="empty-state-icon">' +
-        (currentCat==='ideas'?'💡':currentCat==='groceries'?'🛒':'✨') +
-        '</div><div class="empty-state-text">No ' + currentCat + ' items yet.<br>Add one below!</div></div>';
-    } else {
-      catItems.forEach(item => { html += buildCaptureItemHtml(item); });
-    }
-  }
-
-  if (currentCat === 'todo' && catItems.length === 0 && tasks.filter(t=>!t.done).length === 0) {
-    html = '<div class="empty-state"><div class="empty-state-icon">✅</div><div class="empty-state-text">Nothing queued and no open tasks.<br>Enjoy the clarity!</div></div>';
-  }
-
-  list.innerHTML = html;
-}
-
-// Enter key to save
-document.getElementById('captureInput').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') { e.preventDefault(); addCaptureItem(); }
+// Enter key handling (Shift+Enter for newline, Enter alone to save)
+document.getElementById('qaInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); quickAdd(); }
 });
 
-// ===== VOICE INPUT (Item #2) =====
+// ===== VOICE INPUT =====
 let recognition = null;
 function startVoice() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) { showToast('Voice not supported on this browser'); return; }
-  const btn = document.getElementById('captureMicBtn');
+  if (!SpeechRecognition) { showToast('Voice not supported'); return; }
+  const btn = document.getElementById('qaMicBtn');
   if (recognition) { recognition.stop(); return; }
   recognition = new SpeechRecognition();
   recognition.continuous = false;
@@ -656,21 +536,94 @@ function startVoice() {
   btn.classList.add('recording');
   recognition.onresult = function(e) {
     let transcript = '';
-    for (let i = 0; i < e.results.length; i++) {
-      transcript += e.results[i][0].transcript;
-    }
-    document.getElementById('captureInput').value = transcript;
+    for (let i = 0; i < e.results.length; i++) transcript += e.results[i][0].transcript;
+    document.getElementById('qaInput').value = transcript;
   };
-  recognition.onend = function() {
-    btn.classList.remove('recording');
-    recognition = null;
-  };
-  recognition.onerror = function() {
-    btn.classList.remove('recording');
-    recognition = null;
-    showToast('Voice error — try again');
-  };
+  recognition.onend = function() { btn.classList.remove('recording'); recognition = null; };
+  recognition.onerror = function() { btn.classList.remove('recording'); recognition = null; showToast('Voice error'); };
   recognition.start();
+}
+
+// ===== QUEUE =====
+let pendingDeleteId = null;
+
+function renderQueue() {
+  const list = document.getElementById('queueList');
+  const items = captureQueue.filter(i => !i.done);
+  if (items.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">&#128229;</div><div class="empty-state-text">Queue is empty.<br>Use Quick Add to capture items!</div></div>';
+    return;
+  }
+  const catLabels = {todo:'To Do', ideas:'Idea', groceries:'Grocery', wishlist:'Wish List'};
+  let html = '';
+  items.forEach(item => {
+    html += '<div class="q-item" id="qi_' + item.id + '">';
+    html += '<div class="q-complete" onclick="confirmDelete(' + item.id + ')" title="Complete"></div>';
+    html += '<div class="q-body">';
+    html += '<div class="q-text">' + esc(item.text) + '</div>';
+    html += '<div class="q-meta">';
+    html += '<span class="q-meta-tag">' + (catLabels[item.category] || 'To Do') + '</span>';
+    if (item.fire) html += '<span style="color:var(--fire)">&#128293;</span>';
+    if (item.createdTime) html += '<span>' + item.createdTime + '</span>';
+    html += '</div></div>';
+    html += '<div class="q-edit" onclick="toggleQueueEdit(' + item.id + ')">&#9998;</div>';
+    html += '</div>';
+    // Edit panel
+    html += '<div class="q-edit-panel" id="qedit_' + item.id + '">';
+    html += '<input class="qe-input" id="qeText_' + item.id + '" value="' + esc(item.text) + '">';
+    html += '<div class="qe-row">';
+    html += '<label class="qe-label">Category:</label>';
+    html += '<select class="qe-select" id="qeCat_' + item.id + '">';
+    ['todo','ideas','groceries','wishlist'].forEach(c => {
+      html += '<option value="' + c + '"' + (item.category === c ? ' selected' : '') + '>' + catLabels[c] + '</option>';
+    });
+    html += '</select>';
+    html += '<button class="qe-save" onclick="saveQueueEdit(' + item.id + ')">Save</button>';
+    html += '</div></div>';
+  });
+  list.innerHTML = html;
+}
+
+function toggleQueueEdit(id) {
+  const el = document.getElementById('qedit_' + id);
+  if (el) el.classList.toggle('open');
+}
+
+function saveQueueEdit(id) {
+  const item = captureQueue.find(i => i.id === id);
+  if (!item) return;
+  const textEl = document.getElementById('qeText_' + id);
+  const catEl = document.getElementById('qeCat_' + id);
+  if (textEl && textEl.value.trim()) item.text = textEl.value.trim();
+  if (catEl) item.category = catEl.value;
+  setData('captureQueue', captureQueue);
+  renderQueue();
+  showToast('Updated');
+}
+
+function confirmDelete(id) {
+  const item = captureQueue.find(i => i.id === id);
+  if (!item) return;
+  pendingDeleteId = id;
+  document.getElementById('confirmText').textContent = '"' + item.text + '"';
+  document.getElementById('confirmPopup').style.display = 'flex';
+  document.getElementById('confirmDeleteBtn').onclick = function() { executeDelete(); };
+}
+
+function closeConfirm(e) {
+  if (e && e.target !== document.getElementById('confirmPopup')) return;
+  document.getElementById('confirmPopup').style.display = 'none';
+  pendingDeleteId = null;
+}
+
+function executeDelete() {
+  if (pendingDeleteId === null) return;
+  captureQueue = captureQueue.filter(i => i.id !== pendingDeleteId);
+  setData('captureQueue', captureQueue);
+  document.getElementById('confirmPopup').style.display = 'none';
+  pendingDeleteId = null;
+  renderQueue();
+  showToast('Removed');
 }
 
 // ===== TASK SCORING (mirrors CRM) =====
@@ -740,7 +693,7 @@ function renderTasks() {
 
   if (filtered.length === 0) {
     list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">' +
-      (taskFilter === 'done' ? '🎉' : '✅') + '</div><div class="empty-state-text">' +
+      (taskFilter === 'done' ? '&#127881;' : '&#9989;') + '</div><div class="empty-state-text">' +
       (taskFilter === 'done' ? 'No completed tasks today yet.' : 'No tasks match this filter.') +
       '</div></div>';
     return;
@@ -754,14 +707,14 @@ function renderTasks() {
     const isOverdue = t.due && t.due < TODAY && !t.done;
     html += '<div class="task-card" id="task_' + t.id + '">';
     html += '<div class="task-check' + (t.done ? ' done' : '') + '" onclick="toggleTask(' + t.id + ')"></div>';
-    if (t.priority === 'p0' && !t.done) html += '<div class="task-fire">🔥</div>';
+    if (t.priority === 'p0' && !t.done) html += '<div class="task-fire">&#128293;</div>';
     html += '<div class="task-body">';
     html += '<div class="task-text' + (t.done ? ' done' : '') + '">' + esc(t.text) + '</div>';
     html += '<div class="task-meta">';
     html += '<span class="task-tag tag-' + (t.tag || 'personal') + '">' + (t.tag || 'personal') + '</span>';
     html += '<span class="task-pri pri-' + (t.priority || 'p2') + '">' + (priLabels[t.priority] || 'P2') + '</span>';
-    if (t.due) html += '<span class="task-due' + (isOverdue ? ' overdue' : '') + '">' + (isOverdue ? '⚠ ' : '') + formatDate(t.due) + '</span>';
-    if (t.project) html += '<span class="task-tag">📋 ' + esc(t.project) + '</span>';
+    if (t.due) html += '<span class="task-due' + (isOverdue ? ' overdue' : '') + '">' + (isOverdue ? '&#9888; ' : '') + formatDate(t.due) + '</span>';
+    if (t.project) html += '<span class="task-tag">&#128203; ' + esc(t.project) + '</span>';
     if (!t.done) html += '<span class="dt-score ' + scoreClass + '">' + score + 'pts</span>';
     html += '</div></div></div>';
   });
@@ -777,8 +730,8 @@ function toggleTask(id) {
   const el = document.getElementById('task_' + id);
   if (el && t.done) {
     el.classList.add('completing');
-    setTimeout(() => { renderTasks(); renderCapture(); }, 350);
-  } else { renderTasks(); renderCapture(); }
+    setTimeout(() => { renderTasks(); }, 350);
+  } else { renderTasks(); }
   if (t.done) {
     addWin(t.text, 'task', t.tag);
     showToast('✓ ' + t.text.slice(0, 30) + (t.text.length > 30 ? '...' : ''));
@@ -1005,7 +958,7 @@ function toggleWtdCheck(itemId) {
 }
 
 // ===== UTILITY =====
-function esc(s) { if (!s) return ''; return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function formatDate(dateStr) {
   if (!dateStr) return '';
   if (dateStr === TODAY) return 'Today';
@@ -1024,7 +977,7 @@ function showToast(msg) {
 }
 
 // ===== RENDER ALL =====
-function renderAll() { renderCapture(); renderTasks(); renderWtd(); }
+function renderAll() { updateHomeCounts(); if (currentPage === 'queue') renderQueue(); if (currentPage === 'tasks') renderTasks(); if (currentPage === 'wtd') renderWtd(); }
 renderAll();
 
 // Service worker
