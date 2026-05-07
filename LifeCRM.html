@@ -722,14 +722,14 @@
   /* Morning Launch Sequence */
   .launch-overlay{
     display:none;position:fixed;inset:0;background:rgba(26,26,46,0.92);
-    z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(8px);
+    z-index:200;align-items:flex-start;justify-content:center;backdrop-filter:blur(8px);
     overflow-y:auto;
   }
   .launch-overlay.active{display:flex}
   .launch-box{
     background:rgba(255,255,255,0.8);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
     border:1px solid var(--glass-border);border-radius:24px;
-    padding:32px;width:100%;max-width:600px;margin:24px;
+    padding:32px;width:100%;max-width:600px;margin:24px auto;
     box-shadow:0 20px 60px rgba(0,0,0,0.15),var(--glass-inner);
   }
   .launch-greeting{font-size:28px;font-weight:800;margin-bottom:4px}
@@ -788,14 +788,14 @@
   /* Evening Debrief */
   .debrief-overlay{
     display:none;position:fixed;inset:0;background:rgba(26,26,46,0.92);
-    z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(8px);
+    z-index:200;align-items:flex-start;justify-content:center;backdrop-filter:blur(8px);
     overflow-y:auto;
   }
   .debrief-overlay.active{display:flex}
   .debrief-box{
     background:rgba(255,255,255,0.8);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
     border:1px solid var(--glass-border);border-radius:24px;
-    padding:32px;width:100%;max-width:620px;margin:24px;
+    padding:32px;width:100%;max-width:620px;margin:24px auto;
     box-shadow:0 20px 60px rgba(0,0,0,0.15),var(--glass-inner);
   }
   .debrief-greeting{font-size:28px;font-weight:800;margin-bottom:4px}
@@ -1826,7 +1826,7 @@
   .queue-card{background:var(--card);border-radius:10px;padding:14px;margin-bottom:10px;border:1px solid var(--glass-border);box-shadow:var(--shadow)}
   .queue-card.fire{border-left:3px solid var(--fire)}
   .queue-card-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
-  .queue-card-text{flex:1;font-size:14px;font-weight:500}
+  .queue-card-text{flex:1;font-size:14px;font-weight:500;cursor:pointer}
   .queue-card-time{font-size:10px;color:var(--text-dim)}
   .queue-card-cat{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:.5px}
   .queue-card-cat.todo{background:rgba(52,168,83,0.12);color:var(--green)}
@@ -4156,6 +4156,8 @@ function navigate(page) {
   if (navItem) navItem.classList.add('active');
   window.scrollTo(0, 0);
   if (page === 'whiteboard') { setTimeout(() => renderScoreboard(), 50); }
+  // Persist current page so refresh stays here
+  try { localStorage.setItem('_currentPage', page); } catch(e) {}
 }
 
 document.querySelectorAll('.nav-item').forEach(item => {
@@ -4691,6 +4693,8 @@ function renderTasks() {
           <option value="monthly" ${t.recur==='monthly'?'selected':''}>Monthly</option>
         </select>
         <label><input type="checkbox" id="editDeadline_${idx}" ${t.hardDeadline?'checked':''} style="width:14px;height:14px;accent-color:#ff4444"> Hard Deadline</label>
+        <label style="margin-left:8px"><input type="checkbox" id="editFrog_${idx}" ${t.isFrog?'checked':''} style="width:14px;height:14px;accent-color:#34d399"> 🐸 Frog</label>
+        <label style="margin-left:8px"><input type="checkbox" id="edit8020_${idx}" ${t.is8020?'checked':''} style="width:14px;height:14px;accent-color:#60a5fa"> 80/20</label>
       </div>
       <div class="edit-row">
         <button class="btn btn-sm btn-green" onclick="saveTaskEdit(${idx})">Save</button>
@@ -4766,6 +4770,8 @@ function renderTasks() {
       <div class="edit-row">
         ${_pmBuildProjectSelect('dashEditProject_'+idx, t.project||'', 'max-width:200px;')}
         <label><input type="checkbox" id="dashEditDeadline_${idx}" ${t.hardDeadline?'checked':''} style="width:14px;height:14px;accent-color:#ff4444"> Hard Deadline</label>
+        <label style="margin-left:8px"><input type="checkbox" id="dashEditFrog_${idx}" ${t.isFrog?'checked':''} style="width:14px;height:14px;accent-color:#34d399"> 🐸 Frog</label>
+        <label style="margin-left:8px"><input type="checkbox" id="dashEdit8020_${idx}" ${t.is8020?'checked':''} style="width:14px;height:14px;accent-color:#60a5fa"> 80/20</label>
       </div>
       <div class="edit-row">
         <button class="btn btn-sm btn-green" onclick="saveDashTaskEdit(${idx})">Save</button>
@@ -4936,6 +4942,10 @@ function saveTaskEdit(idx) {
   tasks[idx].project = document.getElementById('editProject_' + idx)?.value || '';
   tasks[idx].recur = document.getElementById('editRecur_' + idx).value;
   tasks[idx].hardDeadline = document.getElementById('editDeadline_' + idx).checked;
+  tasks[idx].isFrog = document.getElementById('editFrog_' + idx).checked;
+  tasks[idx].is8020 = document.getElementById('edit8020_' + idx).checked;
+  // If marking as frog, unset any other frog
+  if (tasks[idx].isFrog) tasks.forEach((t, i) => { if (i !== idx) t.isFrog = false; });
   if (typeof _pmSyncTaskToProject === 'function') _pmSyncTaskToProject(tasks[idx]);
   _openEditIdx = -1;
   saveTasks(); renderTasks(); updateDashboard(); updateBadges();
@@ -4970,6 +4980,9 @@ function saveDashTaskEdit(idx) {
   tasks[idx].due = document.getElementById('dashEditDue_' + idx).value;
   tasks[idx].project = document.getElementById('dashEditProject_' + idx)?.value || '';
   tasks[idx].hardDeadline = document.getElementById('dashEditDeadline_' + idx).checked;
+  tasks[idx].isFrog = document.getElementById('dashEditFrog_' + idx).checked;
+  tasks[idx].is8020 = document.getElementById('dashEdit8020_' + idx).checked;
+  if (tasks[idx].isFrog) tasks.forEach((t, i) => { if (i !== idx) t.isFrog = false; });
   if (typeof _pmSyncTaskToProject === 'function') _pmSyncTaskToProject(tasks[idx]);
   _openDashEditIdx = -1;
   saveTasks(); renderTasks(); updateDashboard(); updateBadges();
@@ -8772,7 +8785,7 @@ function showMorningLaunch() {
   const priSection = document.getElementById('launchPrioritySection');
   const allClear = document.getElementById('launchAllClear');
 
-  const MAX_LAUNCH_TASKS = 5;
+  const MAX_LAUNCH_TASKS = 3;
 
   if (rolled.length > 0) {
     rolledSection.style.display = '';
@@ -9232,7 +9245,7 @@ function renderJournal() {
 let journalSearchQuery = '';
 let journalSearchActiveIdx = 0; // which match is currently "active"
 
-function esc(s) { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML; }
+function esc(s) { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML.replace(/"/g, '&quot;'); }
 function _escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
@@ -13968,7 +13981,7 @@ function renderQueue() {
     html += `<div class="queue-card${fireClass}" id="qitem_${item.id}">`;
     html += `<div class="queue-card-header">`;
     if (item.fire) html += `<span style="font-size:16px">🔥</span>`;
-    html += `<div class="queue-card-text">${esc(item.text)}</div>`;
+    html += `<div class="queue-card-text" onclick="toggleQueueEnrich(${item.id})">${esc(item.text)}</div>`;
     html += `<span class="queue-card-cat ${item.category}">${catLabels[item.category] || item.category}</span>`;
     html += `</div>`;
     html += `<div style="display:flex;align-items:center;justify-content:space-between">`;
@@ -14017,6 +14030,12 @@ function renderQueue() {
     html += `<div class="form-row">`;
     html += `<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim);cursor:pointer;flex-shrink:0">`;
     html += `<input type="checkbox" id="qHard_${item.id}" ${et.hardDeadline ? 'checked ' : ''}style="width:14px;height:14px;accent-color:#ff4444"> Hard Deadline`;
+    html += `</label>`;
+    html += `<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim);cursor:pointer;flex-shrink:0">`;
+    html += `<input type="checkbox" id="qFrog_${item.id}" ${et.isFrog ? 'checked ' : ''}style="width:14px;height:14px;accent-color:#34d399"> 🐸 Frog`;
+    html += `</label>`;
+    html += `<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim);cursor:pointer;flex-shrink:0">`;
+    html += `<input type="checkbox" id="q8020_${item.id}" ${et.is8020 ? 'checked ' : ''}style="width:14px;height:14px;accent-color:#60a5fa"> 80/20`;
     html += `</label>`;
     html += `<select id="qRecur_${item.id}" style="padding:10px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:'Inter',sans-serif">`;
     [['','No Repeat'],['daily','Daily'],['weekdays','Weekdays (M-F)'],['weekly','Weekly'],['biweekly','Every 2 Weeks'],['monthly','Monthly']].forEach(([v,l]) => {
@@ -14078,8 +14097,9 @@ function renderQueue() {
     html += `<div id="qform_ideas_${item.id}" style="display:${item.category === 'ideas' ? 'block' : 'none'}">`;
     html += `<div style="display:flex;gap:8px;margin-bottom:8px">`;
     html += `<input class="input-field" id="qIdeaTitle_${item.id}" value="${esc(item.text)}" placeholder="Research topic..." style="flex:1">`;
-    html += `<select id="qIdeaCat_${item.id}" class="input-field" style="max-width:140px;padding:10px 8px">`;
+    html += `<select id="qIdeaCat_${item.id}" class="input-field" style="max-width:160px;padding:10px 8px" onchange="queueIdeaCatChange(this, ${item.id})">`;
     rcats.forEach(c => { html += `<option value="${c}"${(ei.ideaCategory||'General') === c ? ' selected' : ''}>${c}</option>`; });
+    html += `<option value="__add_new__">+ Add New Category</option>`;
     html += `</select></div>`;
     html += `<div style="display:flex;gap:8px;margin-bottom:8px">`;
     html += `<select id="qIdeaStatus_${item.id}" class="input-field" style="max-width:130px;padding:10px 8px">`;
@@ -14110,7 +14130,15 @@ function renderQueue() {
 
 function toggleQueueEnrich(id) {
   const el = document.getElementById('qenrich_' + id);
-  if (el) el.classList.toggle('open');
+  if (!el) return;
+  el.classList.toggle('open');
+  if (el.classList.contains('open')) {
+    const item = captureQueue.find(i => i.id === id);
+    const cat = item ? item.category : 'todo';
+    const focusMap = { todo: 'qText_', groceries: 'qGrocName_', wishlist: 'qWishName_', ideas: 'qIdeaTitle_' };
+    const inputId = (focusMap[cat] || 'qText_') + id;
+    setTimeout(() => { const inp = document.getElementById(inputId); if (inp) inp.focus(); }, 50);
+  }
 }
 
 function queueReassign(id, newCat) {
@@ -14138,7 +14166,7 @@ function queueHold(id) {
     const v = f => { const el = document.getElementById(f + id); return el ? el.value : ''; };
     const c = f => { const el = document.getElementById(f + id); return el ? el.checked : false; };
     item.text = v('qText_') || item.text;
-    item.enrich = { tag: v('qTag_'), priority: v('qPri_'), due: v('qDue_'), project: v('qProject_'), hardDeadline: c('qHard_'), recur: v('qRecur_') };
+    item.enrich = { tag: v('qTag_'), priority: v('qPri_'), due: v('qDue_'), project: v('qProject_'), hardDeadline: c('qHard_'), recur: v('qRecur_'), isFrog: c('qFrog_'), is8020: c('q8020_') };
   } else if (cat === 'groceries') {
     const v = f => { const el = document.getElementById(f + id); return el ? el.value : ''; };
     item.text = v('qGrocName_') || item.text;
@@ -14161,6 +14189,31 @@ function queueHold(id) {
   showToast('✓ Saved — still in queue');
 }
 
+function queueIdeaCatChange(sel, itemId) {
+  if (sel.value === '__add_new__') {
+    sel.value = '';
+    const name = prompt('Enter new category name:');
+    if (!name || !name.trim()) { sel.value = 'General'; return; }
+    const trimmed = name.trim();
+    if (researchCategories.some(c => c.toLowerCase() === trimmed.toLowerCase())) {
+      sel.value = trimmed;
+      return;
+    }
+    researchCategories.push(trimmed);
+    setData('researchCategories', researchCategories);
+    // Re-render queue to show updated dropdown
+    renderQueue();
+    // Re-open this item's enrichment panel and set the new value
+    setTimeout(() => {
+      const el = document.getElementById('qenrich_' + itemId);
+      if (el) el.classList.add('open');
+      const newSel = document.getElementById('qIdeaCat_' + itemId);
+      if (newSel) newSel.value = trimmed;
+    }, 50);
+    showToast('Category "' + trimmed + '" added');
+  }
+}
+
 function queueSaveTask(id) {
   const item = captureQueue.find(i => i.id === id);
   if (!item) return;
@@ -14173,6 +14226,11 @@ function queueSaveTask(id) {
   const hardDeadline = document.getElementById('qHard_' + id).checked;
   const recur = document.getElementById('qRecur_' + id) ? document.getElementById('qRecur_' + id).value : '';
 
+  const isFrog = document.getElementById('qFrog_' + id) ? document.getElementById('qFrog_' + id).checked : false;
+  const is8020 = document.getElementById('q8020_' + id) ? document.getElementById('q8020_' + id).checked : false;
+  // If marking as frog, unset any other frog
+  if (isFrog) tasks.forEach(t => t.isFrog = false);
+
   const newTask = {
     id: Date.now(),
     text: text || item.text,
@@ -14180,7 +14238,7 @@ function queueSaveTask(id) {
     due: due, project: project,
     hardDeadline: hardDeadline || false,
     recur: recur || '',
-    isFrog: false, is8020: false,
+    isFrog: isFrog, is8020: is8020,
     chainId: '', chainOrder: 0, chainTotal: 0,
     done: false, created: TODAY, completed: ''
   };
@@ -14199,7 +14257,7 @@ function queueSaveTask(id) {
 
   captureQueue = captureQueue.filter(i => i.id !== id);
   setData('captureQueue', captureQueue);
-  renderQueue(); renderTasks();
+  renderAll();
   showToast('✓ Saved as task');
 }
 
@@ -14220,8 +14278,7 @@ function queueSaveGrocery(id) {
   setData('groceryList', groceryList);
   captureQueue = captureQueue.filter(i => i.id !== id);
   setData('captureQueue', captureQueue);
-  renderQueue();
-  if (typeof renderGroceries === 'function') renderGroceries();
+  renderAll();
   showToast('✓ Added to groceries');
 }
 
@@ -14248,8 +14305,7 @@ function queueSaveWishlist(id) {
     setData('wishList', wishList);
     captureQueue = captureQueue.filter(i => i.id !== id);
     setData('captureQueue', captureQueue);
-    renderQueue();
-    if (typeof renderWishList === 'function') renderWishList();
+    renderAll();
     showToast('✓ Added to wish list');
   };
 
@@ -14274,7 +14330,7 @@ function queueSaveIdea(id) {
   const ri = getData('researchIdeas', []);
   ri.push({
     id: Date.now(),
-    text: titleEl ? titleEl.value.trim() || item.text : item.text,
+    title: titleEl ? titleEl.value.trim() || item.text : item.text,
     category: catEl ? catEl.value : 'General',
     status: statusEl ? statusEl.value : 'New',
     priority: priEl ? priEl.value : 'Medium',
@@ -14286,8 +14342,7 @@ function queueSaveIdea(id) {
   if (typeof researchIdeas !== 'undefined') { researchIdeas.length = 0; ri.forEach(x => researchIdeas.push(x)); }
   captureQueue = captureQueue.filter(i => i.id !== id);
   setData('captureQueue', captureQueue);
-  renderQueue();
-  if (typeof renderResearch === 'function') renderResearch();
+  renderAll();
   showToast('✓ Saved to ideas');
 }
 
@@ -14850,6 +14905,13 @@ checkRecurringTasks();
 renderAll();
 loadFormFields();
 renderJournal();
+// Restore last page on refresh instead of defaulting to dashboard
+try {
+  const savedPage = localStorage.getItem('_currentPage');
+  if (savedPage && document.getElementById('page-' + savedPage)) {
+    navigate(savedPage);
+  }
+} catch(e) {}
 // Safety-net re-renders — catch the race where Firebase data arrives
 // after the initial synchronous render runs with stale/empty localStorage.
 function _safetyRerender(label) {
@@ -14956,7 +15018,7 @@ function researchEdit(id) {
   if (!r) return;
   researchEditingId = id;
   // Populate form fields with existing values
-  document.getElementById('researchNewTitle').value = r.title || '';
+  document.getElementById('researchNewTitle').value = r.title || r.text || '';
   document.getElementById('researchNewCat').value = r.category || 'General';
   document.getElementById('researchNewStatus').value = r.status || 'New';
   document.getElementById('researchNewPriority').value = r.priority || 'Medium';
@@ -14969,7 +15031,7 @@ function researchEdit(id) {
   const panelTitle = document.querySelector('#researchAddPanel .panel-title');
   if (btn) btn.textContent = 'Save Changes';
   if (cancelBtn) cancelBtn.style.display = 'inline-block';
-  if (panelTitle) panelTitle.textContent = 'Editing: ' + (r.title || 'Untitled');
+  if (panelTitle) panelTitle.textContent = 'Editing: ' + (r.title || r.text || 'Untitled');
   // Scroll the form into view so the user can see it
   document.getElementById('researchAddPanel').scrollIntoView({behavior:'smooth', block:'start'});
   document.getElementById('researchNewTitle').focus();
@@ -15006,7 +15068,7 @@ function renderResearch() {
     let notesHtml = (r.notes || '').replace(/\n/g, '<br>');
     return `<div class="research-card">
       <div class="research-card-header">
-        <div class="research-card-title">${r.title}</div>
+        <div class="research-card-title">${r.title || r.text || 'Untitled'}</div>
         <span class="status-badge ${statusCls}">${r.status}</span>
         <span class="status-badge ${priCls}">${r.priority}</span>
         <span class="cat-badge">${r.category}</span>
