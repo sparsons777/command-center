@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cc-v5-20260507';
+const CACHE_NAME = 'cc-v6-20260508';
 const ASSETS = [
   './index.html',
   './manifest.json',

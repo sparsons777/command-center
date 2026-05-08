@@ -423,6 +423,21 @@
   .eighty20-task{font-size:13px;color:var(--text);padding:6px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
   .eighty20-task:last-child{border-bottom:none}
   .eighty20-num{font-size:11px;font-weight:800;color:var(--yellow);width:18px;flex-shrink:0}
+
+  /* Life Change panel */
+  .lifechange-panel{
+    background:linear-gradient(135deg,rgba(230,220,250,0.55),rgba(255,255,255,0.45));
+    backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
+    border:1px solid rgba(147,52,230,0.15);border-left:4px solid var(--purple);
+    border-radius:14px;padding:18px;box-shadow:var(--shadow),var(--glass-inner);
+    transition:all 0.25s cubic-bezier(0.4,0,0.2,1);
+  }
+  .lifechange-panel:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg),var(--glass-inner)}
+  .lifechange-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .lifechange-task{font-size:13px;color:var(--text);padding:6px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+  .lifechange-task:last-child{border-bottom:none}
+  .task-flag.lifechange-active{background:rgba(147,52,230,0.2);border-color:var(--purple);color:var(--purple)}
+  .task-flag.lifechange-inactive{color:var(--text-muted)}
   .add-row{display:flex;gap:8px;margin-top:14px}
   .add-row input,.add-row select{flex:1}
   .add-row select{padding:10px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:'Inter',sans-serif;max-width:120px}
@@ -1266,6 +1281,12 @@
   .groc-delete{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:0 4px;flex-shrink:0}
   .groc-delete:hover{color:var(--red)}
   .groc-section-title{font-size:12px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin:14px 0 6px;padding-left:4px}
+  .groc-store-tabs{display:flex;gap:4px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+  .groc-store-tab{padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text-dim);font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s}
+  .groc-store-tab:hover{border-color:var(--accent);color:var(--text)}
+  .groc-store-tab.active{background:var(--accent);color:#1a1a2e;border-color:var(--accent)}
+  .groc-store-tab.manage{background:none;border:1px dashed var(--border);color:var(--text-muted);font-size:11px}
+  .groc-store-tab.manage:hover{border-color:var(--accent);color:var(--text)}
   .groc-clear-row{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
 
   /* ===== WISH LIST ===== */
@@ -1879,7 +1900,8 @@ const ICONS = {
   mic:'<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>',
   heart:'<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>',
   rocket:'<path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>',
-  search:'<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>'
+  search:'<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+  layers:'<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>'
 };
 const ICON_COLORS = {
   dashboard:'#e8b931', sunrise:'#e8710a', moon:'#9334e6',
@@ -1890,7 +1912,7 @@ const ICON_COLORS = {
   dollar:'#34a853', home:'#4285f4', lightbulb:'#e8b931',
   target:'#e8710a', calendar:'#9334e6',
   settings:'#5a5a72', mic:'#14b8a6', book_open:'#14b8a6', map:'#e8710a', heart:'#e8710a',
-  rocket:'#9334e6', search:'#5a5a72'
+  rocket:'#9334e6', search:'#5a5a72', layers:'#9334e6'
 };
 function ico(name, size, color) {
   size = size || 18;
@@ -2128,6 +2150,20 @@ function ico(name, size, color) {
     </div>
   </div>
 
+  <!-- Row: Life Change -->
+  <div style="margin-bottom:16px">
+    <div class="dash-duo-panel lifechange-panel" id="dashLifeChange">
+      <div class="lifechange-header">
+        <span style="display:inline-flex"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9334e6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></span>
+        <div style="font-size:15px;font-weight:700">Life Change</div>
+        <span style="font-size:11px;color:var(--text-dim);margin-left:auto">The things that actually transform your life</span>
+      </div>
+      <div id="dashLifeChangeList">
+        <div class="empty-state" style="padding:10px">No life-change tasks flagged. These are the buried priorities that move the needle on who you're becoming.</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Row: Tasks | Inbox + Gratitude -->
   <div class="row">
     <div class="col-grow">
@@ -2267,6 +2303,15 @@ function ico(name, size, color) {
           <div class="form-row">
             <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim);cursor:pointer;flex-shrink:0">
               <input type="checkbox" id="newTaskHardDeadline" style="width:14px;height:14px;accent-color:#ff4444"> Hard Deadline
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim);cursor:pointer;flex-shrink:0">
+              <input type="checkbox" id="newTaskFrog" style="width:14px;height:14px;accent-color:#34d399"> 🐸 Frog
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim);cursor:pointer;flex-shrink:0">
+              <input type="checkbox" id="newTask8020" style="width:14px;height:14px;accent-color:#60a5fa"> 80/20
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim);cursor:pointer;flex-shrink:0">
+              <input type="checkbox" id="newTaskLifeChange" style="width:14px;height:14px;accent-color:#9334e6"> 🔄 Life Change
             </label>
             <select id="newTaskRecur" style="padding:10px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:'Inter',sans-serif">
               <option value="">No Repeat</option>
@@ -3406,6 +3451,7 @@ function ico(name, size, color) {
       <button class="btn btn-sm" onclick="grocClearAll()" style="color:var(--red)">Clear all</button>
     </div>
   </div>
+  <div class="groc-store-tabs" id="grocStoreTabs"></div>
   <div class="groc-input-row">
     <input class="input-field" id="grocNewItem" placeholder="Add item..." onkeydown="if(event.key==='Enter')grocAdd()">
     <input class="input-field" id="grocNewQty" placeholder="Qty" style="max-width:70px">
@@ -3421,6 +3467,7 @@ function ico(name, size, color) {
       <option value="household">Household</option>
       <option value="other">Other</option>
     </select>
+    <select id="grocNewStore" class="input-field" style="max-width:160px;padding:10px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px"></select>
     <button class="btn btn-primary" onclick="grocAdd()">+ Add</button>
   </div>
   <div id="grocList"></div>
@@ -4092,6 +4139,7 @@ function reloadAllData() {
   monthlyExpenses = getData('monthlyExpenses', 0);
   sbData = getData('sbData', sbData);
   groceryList = getData('groceryList', []);
+  groceryStores = getData('groceryStores', ['Aldi', 'Kroger', 'WalMart', "Sam's Club"]);
   wishList = getData('wishList', []);
   gratitudeLog = getData('gratitudeLog', {});
   captureQueue = getData('captureQueue', []);
@@ -4217,7 +4265,7 @@ function quickCaptureSend() {
   const type = document.getElementById('quickCaptureType').value;
 
   if (type === 'task') {
-    tasks.push({id:Date.now(),text,tag:'personal',priority:'p2',due:'',project:'',hardDeadline:false,recur:'',isFrog:false,is8020:false,chainId:'',chainOrder:0,chainTotal:0,done:false,created:TODAY,completed:''});
+    tasks.push({id:Date.now(),text,tag:'personal',priority:'p2',due:'',project:'',hardDeadline:false,recur:'',isFrog:false,is8020:false,isLifeChange:false,chainId:'',chainOrder:0,chainTotal:0,done:false,created:TODAY,completed:''});
     saveTasks();
     renderTasks(); updateDashboard(); updateBadges();
   } else if (type === 'inbox') {
@@ -4297,7 +4345,7 @@ function saveFrog() {
       tasks.push({
         id: Date.now(), text: val, tag: 'business', priority: 'p1',
         due: TODAY, project: '', hardDeadline: false, recur: '',
-        isFrog: true, is8020: false, chainId: '', chainOrder: 0, chainTotal: 0,
+        isFrog: true, is8020: false, isLifeChange: false, chainId: '', chainOrder: 0, chainTotal: 0,
         done: false, created: TODAY, completed: ''
       });
     }
@@ -4324,7 +4372,7 @@ function completeFrogTask() {
       frogTask = {
         id: Date.now(), text: frogText, tag: 'business', priority: 'p1',
         due: TODAY, project: '', hardDeadline: false, recur: '',
-        isFrog: true, is8020: false, chainId: '', chainOrder: 0, chainTotal: 0,
+        isFrog: true, is8020: false, isLifeChange: false, chainId: '', chainOrder: 0, chainTotal: 0,
         done: false, created: TODAY, completed: ''
       };
       tasks.push(frogTask);
@@ -4412,6 +4460,38 @@ function updateFrogDisplay() {
   } else {
     list8020.innerHTML = '<div class="empty-state" style="padding:10px">No 80/20 tasks set. Flag up to 3 from your task list.</div>';
   }
+
+  // Update Life Change dashboard panel
+  const lcActive = tasks.filter(t => t.isLifeChange && !t.done);
+  const lcDone = tasks.filter(t => t.isLifeChange && t.done && t.completed === TODAY);
+  const lcList = document.getElementById('dashLifeChangeList');
+  if (lcList) {
+    if (lcActive.length > 0 || lcDone.length > 0) {
+      let lcHtml = '';
+      lcHtml += lcDone.map(t => {
+        return `<div class="lifechange-task" style="justify-content:space-between;opacity:0.7">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="color:var(--green);font-size:14px">&#10003;</span>
+            <span style="text-decoration:line-through;color:var(--text-muted)">${t.text}</span>
+          </div>
+          <span style="font-size:11px;color:var(--green);font-weight:600;flex-shrink:0">Done</span>
+        </div>`;
+      }).join('');
+      lcHtml += lcActive.map(t => {
+        const idx = tasks.indexOf(t);
+        return `<div class="lifechange-task" style="justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="color:var(--purple);font-size:14px">&#9670;</span>
+            <span>${t.text}</span>
+          </div>
+          <button class="btn btn-sm btn-green" onclick="toggleTask(${idx})" style="padding:2px 10px;font-size:11px;flex-shrink:0">&#10003; Done</button>
+        </div>`;
+      }).join('');
+      lcList.innerHTML = lcHtml;
+    } else {
+      lcList.innerHTML = '<div class="empty-state" style="padding:10px">No life-change tasks flagged. These are the buried priorities that move the needle on who you\'re becoming.</div>';
+    }
+  }
 }
 
 // ===== TASKS (Persistent System) =====
@@ -4438,11 +4518,11 @@ function migrateTasks() {
   }
   // Default starter tasks
   return [
-    {id:1,text:"Complete financial picture — document every debt and income source",tag:"finance",priority:"p1",due:"",project:"Financial Foundation",hardDeadline:false,recur:"",isFrog:false,is8020:false,chainId:"",chainOrder:0,chainTotal:0,done:false,created:TODAY,completed:""},
-    {id:2,text:"Follow up on State Farm claim / Ana Westbury",tag:"finance",priority:"p1",due:"",project:"Financial Foundation",hardDeadline:false,recur:"",isFrog:false,is8020:false,chainId:"",chainOrder:0,chainTotal:0,done:false,created:TODAY,completed:""},
-    {id:3,text:"30 min physical activity — walk, gym, anything",tag:"health",priority:"p2",due:"",project:"",hardDeadline:false,recur:"daily",isFrog:false,is8020:false,chainId:"",chainOrder:0,chainTotal:0,done:false,created:TODAY,completed:""},
-    {id:4,text:"Identify #1 income action for this week",tag:"business",priority:"p1",due:"",project:"",hardDeadline:false,recur:"weekly",isFrog:false,is8020:false,chainId:"",chainOrder:0,chainTotal:0,done:false,created:TODAY,completed:""},
-    {id:5,text:"Text Kenny — reconnect on weekly meetings",tag:"personal",priority:"p2",due:"",project:"",hardDeadline:false,recur:"weekly",isFrog:false,is8020:false,chainId:"",chainOrder:0,chainTotal:0,done:false,created:TODAY,completed:""},
+    {id:1,text:"Complete financial picture — document every debt and income source",tag:"finance",priority:"p1",due:"",project:"Financial Foundation",hardDeadline:false,recur:"",isFrog:false,is8020:false,isLifeChange:false,chainId:"",chainOrder:0,chainTotal:0,done:false,created:TODAY,completed:""},
+    {id:2,text:"Follow up on State Farm claim / Ana Westbury",tag:"finance",priority:"p1",due:"",project:"Financial Foundation",hardDeadline:false,recur:"",isFrog:false,is8020:false,isLifeChange:false,chainId:"",chainOrder:0,chainTotal:0,done:false,created:TODAY,completed:""},
+    {id:3,text:"30 min physical activity — walk, gym, anything",tag:"health",priority:"p2",due:"",project:"",hardDeadline:false,recur:"daily",isFrog:false,is8020:false,isLifeChange:false,chainId:"",chainOrder:0,chainTotal:0,done:false,created:TODAY,completed:""},
+    {id:4,text:"Identify #1 income action for this week",tag:"business",priority:"p1",due:"",project:"",hardDeadline:false,recur:"weekly",isFrog:false,is8020:false,isLifeChange:false,chainId:"",chainOrder:0,chainTotal:0,done:false,created:TODAY,completed:""},
+    {id:5,text:"Text Kenny — reconnect on weekly meetings",tag:"personal",priority:"p2",due:"",project:"",hardDeadline:false,recur:"weekly",isFrog:false,is8020:false,isLifeChange:false,chainId:"",chainOrder:0,chainTotal:0,done:false,created:TODAY,completed:""},
   ];
 }
 let tasks = migrateTasks();
@@ -4527,9 +4607,10 @@ function scoreTask(t) {
     else if (hasP1Sibling) score += 4;  // Project has urgent items
   }
 
-  // --- FACTOR 5: Frog / 80-20 Designation (0-20 pts) ---
-  if (t.isFrog) score += 20;        // Frog gets major bump
-  else if (t.is8020) score += 12;   // 80/20 gets solid bump
+  // --- FACTOR 5: Frog / 80-20 / Life Change Designation (0-20 pts) ---
+  if (t.isFrog) score += 20;             // Frog gets major bump
+  else if (t.is8020) score += 12;        // 80/20 gets solid bump
+  else if (t.isLifeChange) score += 12;  // Life Change = same weight as 80/20
 
   // --- FACTOR 6: Blueprint Goal Alignment (0-10 pts) ---
   if (t.blueprintRef) score += 10;  // Task tied to a Blueprint action gets boost
@@ -4652,6 +4733,7 @@ function renderTasks() {
       <span class="task-tag tag-${t.tag}">${t.tag}</span>
       ${!t.done ? '<button class="task-flag '+(t.isFrog?'frog-active':'frog-inactive')+'" onclick="toggleFrog('+idx+')" title="Set as Frog">'+ico('frog',16)+'</button>' : ''}
       ${!t.done ? '<button class="task-flag '+(t.is8020?'eight020-active':'eight020-inactive')+'" onclick="toggle8020('+idx+')" title="Set as 80/20">'+ico('target',16)+'</button>' : ''}
+      ${!t.done ? '<button class="task-flag '+(t.isLifeChange?'lifechange-active':'lifechange-inactive')+'" onclick="toggleLifeChange('+idx+')" title="Set as Life Change">'+ico('layers',16)+'</button>' : ''}
       <button class="task-edit" onclick="openTaskEdit(${idx})" title="Edit">&#9998;</button>
       <button class="task-delete" onclick="deleteTask(${idx})">&times;</button>
     `;
@@ -4695,6 +4777,7 @@ function renderTasks() {
         <label><input type="checkbox" id="editDeadline_${idx}" ${t.hardDeadline?'checked':''} style="width:14px;height:14px;accent-color:#ff4444"> Hard Deadline</label>
         <label style="margin-left:8px"><input type="checkbox" id="editFrog_${idx}" ${t.isFrog?'checked':''} style="width:14px;height:14px;accent-color:#34d399"> 🐸 Frog</label>
         <label style="margin-left:8px"><input type="checkbox" id="edit8020_${idx}" ${t.is8020?'checked':''} style="width:14px;height:14px;accent-color:#60a5fa"> 80/20</label>
+        <label style="margin-left:8px"><input type="checkbox" id="editLifeChange_${idx}" ${t.isLifeChange?'checked':''} style="width:14px;height:14px;accent-color:#9334e6"> 🔄 Life Change</label>
       </div>
       <div class="edit-row">
         <button class="btn btn-sm btn-green" onclick="saveTaskEdit(${idx})">Save</button>
@@ -4737,6 +4820,7 @@ function renderTasks() {
       <span class="task-tag tag-${t.tag}">${t.tag}</span>
       <button class="task-flag ${t.isFrog?'frog-active':'frog-inactive'}" onclick="toggleFrog(${idx})" title="Set as Frog">${ico('frog',16)}</button>
       <button class="task-flag ${t.is8020?'eight020-active':'eight020-inactive'}" onclick="toggle8020(${idx})" title="Set as 80/20">${ico('target',16)}</button>
+      <button class="task-flag ${t.isLifeChange?'lifechange-active':'lifechange-inactive'}" onclick="toggleLifeChange(${idx})" title="Set as Life Change">${ico('layers',16)}</button>
       <button class="task-edit" onclick="openDashTaskEdit(${idx})" title="Edit">&#9998;</button>
       <button class="task-delete" onclick="deleteTask(${idx})">&times;</button>
     `;
@@ -4772,6 +4856,7 @@ function renderTasks() {
         <label><input type="checkbox" id="dashEditDeadline_${idx}" ${t.hardDeadline?'checked':''} style="width:14px;height:14px;accent-color:#ff4444"> Hard Deadline</label>
         <label style="margin-left:8px"><input type="checkbox" id="dashEditFrog_${idx}" ${t.isFrog?'checked':''} style="width:14px;height:14px;accent-color:#34d399"> 🐸 Frog</label>
         <label style="margin-left:8px"><input type="checkbox" id="dashEdit8020_${idx}" ${t.is8020?'checked':''} style="width:14px;height:14px;accent-color:#60a5fa"> 80/20</label>
+        <label style="margin-left:8px"><input type="checkbox" id="dashEditLifeChange_${idx}" ${t.isLifeChange?'checked':''} style="width:14px;height:14px;accent-color:#9334e6"> 🔄 Life Change</label>
       </div>
       <div class="edit-row">
         <button class="btn btn-sm btn-green" onclick="saveDashTaskEdit(${idx})">Save</button>
@@ -4793,10 +4878,12 @@ function toggleTask(i) {
     addWin(tasks[i].text, 'task', tasks[i].tag);
     // Spawn next recurring instance if applicable
     if (tasks[i].recur) spawnRecurringTask(tasks[i]);
-    // Auto-complete WTD items for Frog and 80/20
+    // Auto-complete WTD items for Frog, 80/20, and Life Change
     if (tasks[i].isFrog) { autoCompleteWtdItem('_frog'); renderWinTheDay(); }
     const done8020Today = tasks.filter(t => t.is8020 && t.done && t.completed === TODAY).length;
     if (tasks[i].is8020 && done8020Today >= 3) { autoCompleteWtdItem('_8020'); renderWinTheDay(); }
+    const doneLCToday = tasks.filter(t => t.isLifeChange && t.done && t.completed === TODAY).length;
+    if (tasks[i].isLifeChange && doneLCToday >= 1) { autoCompleteWtdItem('_lifechange'); renderWinTheDay(); }
   } else {
     tasks[i].completed = '';
   }
@@ -4911,6 +4998,12 @@ function toggle8020(i) {
   saveTasks(); renderTasks(); updateDashboard();
 }
 
+function toggleLifeChange(i) {
+  const wasActive = tasks[i].isLifeChange;
+  tasks[i].isLifeChange = !wasActive;
+  saveTasks(); renderTasks(); updateDashboard();
+}
+
 // ===== INLINE TASK EDITING =====
 let _openEditIdx = -1;
 
@@ -4944,6 +5037,7 @@ function saveTaskEdit(idx) {
   tasks[idx].hardDeadline = document.getElementById('editDeadline_' + idx).checked;
   tasks[idx].isFrog = document.getElementById('editFrog_' + idx).checked;
   tasks[idx].is8020 = document.getElementById('edit8020_' + idx).checked;
+  tasks[idx].isLifeChange = document.getElementById('editLifeChange_' + idx).checked;
   // If marking as frog, unset any other frog
   if (tasks[idx].isFrog) tasks.forEach((t, i) => { if (i !== idx) t.isFrog = false; });
   if (typeof _pmSyncTaskToProject === 'function') _pmSyncTaskToProject(tasks[idx]);
@@ -4982,6 +5076,7 @@ function saveDashTaskEdit(idx) {
   tasks[idx].hardDeadline = document.getElementById('dashEditDeadline_' + idx).checked;
   tasks[idx].isFrog = document.getElementById('dashEditFrog_' + idx).checked;
   tasks[idx].is8020 = document.getElementById('dashEdit8020_' + idx).checked;
+  tasks[idx].isLifeChange = document.getElementById('dashEditLifeChange_' + idx).checked;
   if (tasks[idx].isFrog) tasks.forEach((t, i) => { if (i !== idx) t.isFrog = false; });
   if (typeof _pmSyncTaskToProject === 'function') _pmSyncTaskToProject(tasks[idx]);
   _openDashEditIdx = -1;
@@ -4995,9 +5090,14 @@ function addTask() {
   const due = document.getElementById('newTaskDue').value;
   const project = document.getElementById('newTaskProject').value.trim();
   const hardDeadline = document.getElementById('newTaskHardDeadline').checked;
+  const newFrog = document.getElementById('newTaskFrog').checked;
+  const new8020 = document.getElementById('newTask8020').checked;
+  const newLifeChange = document.getElementById('newTaskLifeChange').checked;
   const recur = document.getElementById('newTaskRecur').value;
   const rawText = input.value.trim();
   if (!rawText) return;
+  // If marking as frog, clear existing frogs
+  if (newFrog) tasks.forEach(t => t.isFrog = false);
 
   // Hide template dropdown
   document.getElementById('templateDropdown').style.display = 'none';
@@ -5014,7 +5114,7 @@ function addTask() {
         text: part.trim(),
         tag, priority, due: idx === 0 ? due : '', project,
         hardDeadline: idx === parts.length - 1 ? (hardDeadline || false) : false,
-        recur: '', isFrog: false, is8020: false,
+        recur: '', isFrog: idx === 0 ? newFrog : false, is8020: idx === 0 ? new8020 : false, isLifeChange: idx === 0 ? newLifeChange : false,
         chainId: chainId,
         chainOrder: idx,
         chainTotal: parts.length,
@@ -5029,7 +5129,7 @@ function addTask() {
       tag, priority, due, project,
       hardDeadline: hardDeadline || false,
       recur: recur || '',
-      isFrog: false, is8020: false,
+      isFrog: newFrog, is8020: new8020, isLifeChange: newLifeChange,
       chainId: '', chainOrder: 0, chainTotal: 0,
       done: false, created: TODAY, completed: ''
     });
@@ -5045,6 +5145,9 @@ function addTask() {
   document.getElementById('newTaskDue').value = '';
   document.getElementById('newTaskProject').value = '';
   document.getElementById('newTaskHardDeadline').checked = false;
+  document.getElementById('newTaskFrog').checked = false;
+  document.getElementById('newTask8020').checked = false;
+  document.getElementById('newTaskLifeChange').checked = false;
   document.getElementById('newTaskRecur').value = '';
   saveTasks(); renderTasks(); updateDashboard(); updateBadges();
   if (typeof _pmRefreshNewTaskDropdown === 'function') _pmRefreshNewTaskDropdown();
@@ -5382,8 +5485,9 @@ function spawnRecurringTask(completedTask) {
     project: completedTask.project,
     hardDeadline: completedTask.hardDeadline || false,
     recur: completedTask.recur,
-    isFrog: false,  // New instance doesn't inherit frog/80-20 flags
+    isFrog: false,  // New instance doesn't inherit frog/80-20/life-change flags
     is8020: false,
+    isLifeChange: false,
     chainId: '', chainOrder: 0, chainTotal: 0,
     done: false,
     created: TODAY,
@@ -5904,7 +6008,8 @@ function getWtdItemsForDate(dateStr) {
   const synthItems = [
     { id: '_grat', text: 'Daily Gratitude', weight: 3, repeat: { type: 'daily' }, active: true, synthetic: true },
     { id: '_frog', text: 'Eat the Frog', weight: 5, repeat: { type: 'daily' }, active: true, synthetic: true },
-    { id: '_8020', text: '80/20 (3+ done)', weight: 4, repeat: { type: 'daily' }, active: true, synthetic: true }
+    { id: '_8020', text: '80/20 (3+ done)', weight: 4, repeat: { type: 'daily' }, active: true, synthetic: true },
+    { id: '_lifechange', text: 'Life Change (1+ done)', weight: 4, repeat: { type: 'daily' }, active: true, synthetic: true }
   ];
   synthItems.forEach(si => {
     results.push({ ...si, originalDate: dateStr, rolledOver: false });
@@ -5942,7 +6047,8 @@ function getWtdScoreForDate(dateStr) {
   const synthItems = [
     { id: '_grat', text: 'Daily Gratitude', weight: 3, repeat: { type: 'daily' }, active: true, synthetic: true },
     { id: '_frog', text: 'Eat the Frog', weight: 5, repeat: { type: 'daily' }, active: true, synthetic: true },
-    { id: '_8020', text: '80/20 (3+ done)', weight: 4, repeat: { type: 'daily' }, active: true, synthetic: true }
+    { id: '_8020', text: '80/20 (3+ done)', weight: 4, repeat: { type: 'daily' }, active: true, synthetic: true },
+    { id: '_lifechange', text: 'Life Change (1+ done)', weight: 4, repeat: { type: 'daily' }, active: true, synthetic: true }
   ];
   nativeItems = [...nativeItems, ...synthItems];
   const checks = wtdChecks[dateStr] || {};
@@ -6207,7 +6313,7 @@ function renderWinTheDay() {
       const checkSymbol = isNA ? 'N/A' : (checked ? '✓' : '');
       const textClass = isNA ? 'na' : (checked ? 'checked' : '');
       const synthTag = isSynth ? '<span style="font-size:9px;color:var(--purple);background:rgba(147,52,230,0.1);padding:1px 6px;border-radius:3px;margin-left:6px">auto</span>' : '';
-      const synthHint = isSynth && !checked ? `<span style="font-size:10px;color:var(--text-dim);margin-left:4px">${item.id==='_grat'?'fill in gratitude':item.id==='_frog'?'complete your frog task':'complete 3+ 80/20 tasks'}</span>` : '';
+      const synthHint = isSynth && !checked ? `<span style="font-size:10px;color:var(--text-dim);margin-left:4px">${item.id==='_grat'?'fill in gratitude':item.id==='_frog'?'complete your frog task':item.id==='_8020'?'complete 3+ 80/20 tasks':item.id==='_lifechange'?'complete 1+ life change task':''}</span>` : '';
       const clickAction = isSynth ? '' : `onclick="toggleWtdCheckForDate(${typeof item.id==='string'?"'"+item.id+"'":item.id},'${item.originalDate}')"`;
       const naBtn = isSynth ? '' : `<button class="wtd-na-btn ${isNA?'active':''}" onclick="toggleWtdNA(${typeof item.id==='string'?"'"+item.id+"'":item.id},event)" title="Not applicable today">N/A</button>`;
       return `<div class="wtd-item" draggable="true" ondragstart="wtdDailyDragStart(event,${idx})" ondragover="wtdDailyDragOver(event)" ondrop="wtdDailyDrop(event,${idx})" ondragend="wtdDailyDragEnd(event)" style="${isSynth?'opacity:0.85':''}">
@@ -9170,7 +9276,7 @@ function bpActionToTask(gi, mi, ai) {
   tasks.push({
     id: Date.now(), text: action.text, tag: 'personal', priority: 'p1',
     due: '', project: goalName, hardDeadline: false, recur: '',
-    isFrog: false, is8020: false, chainId: '', chainOrder: 0, chainTotal: 0,
+    isFrog: false, is8020: false, isLifeChange: false, chainId: '', chainOrder: 0, chainTotal: 0,
     blueprintRef: {goalId: blueprintGoals[gi].id, msId: blueprintGoals[gi].milestones[mi].id, actionId: action.id},
     done: false, created: TODAY, completed: ''
   });
@@ -10427,7 +10533,7 @@ function submitCrmTask(idx) {
     project: 'Real Estate',
     hardDeadline: false,
     recur: '',
-    isFrog: false, is8020: false,
+    isFrog: false, is8020: false, isLifeChange: false,
     chainId: '', chainOrder: 0, chainTotal: 0,
     done: false, created: TODAY, completed: ''
   });
@@ -14037,6 +14143,9 @@ function renderQueue() {
     html += `<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim);cursor:pointer;flex-shrink:0">`;
     html += `<input type="checkbox" id="q8020_${item.id}" ${et.is8020 ? 'checked ' : ''}style="width:14px;height:14px;accent-color:#60a5fa"> 80/20`;
     html += `</label>`;
+    html += `<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim);cursor:pointer;flex-shrink:0">`;
+    html += `<input type="checkbox" id="qLifeChange_${item.id}" ${et.isLifeChange ? 'checked ' : ''}style="width:14px;height:14px;accent-color:#9334e6"> 🔄 Life Change`;
+    html += `</label>`;
     html += `<select id="qRecur_${item.id}" style="padding:10px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:'Inter',sans-serif">`;
     [['','No Repeat'],['daily','Daily'],['weekdays','Weekdays (M-F)'],['weekly','Weekly'],['biweekly','Every 2 Weeks'],['monthly','Monthly']].forEach(([v,l]) => {
       html += `<option value="${v}"${(et.recur||'') === v ? ' selected' : ''}>${l}</option>`;
@@ -14166,7 +14275,7 @@ function queueHold(id) {
     const v = f => { const el = document.getElementById(f + id); return el ? el.value : ''; };
     const c = f => { const el = document.getElementById(f + id); return el ? el.checked : false; };
     item.text = v('qText_') || item.text;
-    item.enrich = { tag: v('qTag_'), priority: v('qPri_'), due: v('qDue_'), project: v('qProject_'), hardDeadline: c('qHard_'), recur: v('qRecur_'), isFrog: c('qFrog_'), is8020: c('q8020_') };
+    item.enrich = { tag: v('qTag_'), priority: v('qPri_'), due: v('qDue_'), project: v('qProject_'), hardDeadline: c('qHard_'), recur: v('qRecur_'), isFrog: c('qFrog_'), is8020: c('q8020_'), isLifeChange: c('qLifeChange_') };
   } else if (cat === 'groceries') {
     const v = f => { const el = document.getElementById(f + id); return el ? el.value : ''; };
     item.text = v('qGrocName_') || item.text;
@@ -14228,6 +14337,7 @@ function queueSaveTask(id) {
 
   const isFrog = document.getElementById('qFrog_' + id) ? document.getElementById('qFrog_' + id).checked : false;
   const is8020 = document.getElementById('q8020_' + id) ? document.getElementById('q8020_' + id).checked : false;
+  const isLifeChange = document.getElementById('qLifeChange_' + id) ? document.getElementById('qLifeChange_' + id).checked : false;
   // If marking as frog, unset any other frog
   if (isFrog) tasks.forEach(t => t.isFrog = false);
 
@@ -14238,7 +14348,7 @@ function queueSaveTask(id) {
     due: due, project: project,
     hardDeadline: hardDeadline || false,
     recur: recur || '',
-    isFrog: isFrog, is8020: is8020,
+    isFrog: isFrog, is8020: is8020, isLifeChange: isLifeChange,
     chainId: '', chainOrder: 0, chainTotal: 0,
     done: false, created: TODAY, completed: ''
   };
@@ -14374,38 +14484,101 @@ function queueSaveAllCategory(cat) {
 
 // ===== GROCERY LIST =====
 let groceryList = getData('groceryList', []);
+let groceryStores = getData('groceryStores', ['Aldi', 'Kroger', 'WalMart', "Sam's Club"]);
+let grocActiveStore = 'all'; // 'all' or store name
 
 function saveGroceries() { setData('groceryList', groceryList); }
+function saveGroceryStores() { setData('groceryStores', groceryStores); }
 
 const grocCategories = ['produce','dairy','meat','bakery','frozen','pantry','drinks','snacks','household','other'];
 const grocCatLabels = {produce:'Produce',dairy:'Dairy',meat:'Meat',bakery:'Bakery',frozen:'Frozen',pantry:'Pantry',drinks:'Drinks',snacks:'Snacks',household:'Household',other:'Other'};
 
+function renderGrocStoreTabs() {
+  const tabsEl = document.getElementById('grocStoreTabs');
+  if (!tabsEl) return;
+  let html = '<div class="groc-store-tab' + (grocActiveStore === 'all' ? ' active' : '') + '" onclick="grocSwitchStore(\'all\')">All</div>';
+  groceryStores.forEach(s => {
+    const count = groceryList.filter(g => g.store === s && !g.checked).length;
+    html += '<div class="groc-store-tab' + (grocActiveStore === s ? ' active' : '') + '" onclick="grocSwitchStore(\'' + s.replace(/'/g, "\\'") + '\')">' + s + (count ? ' <span style="opacity:0.6">(' + count + ')</span>' : '') + '</div>';
+  });
+  html += '<div class="groc-store-tab manage" onclick="grocManageStores()">+ Manage Stores</div>';
+  tabsEl.innerHTML = html;
+  // Also update the store dropdown in the add row
+  const storeSel = document.getElementById('grocNewStore');
+  if (storeSel) {
+    let opts = '<option value="">— Any Store —</option>';
+    groceryStores.forEach(s => { opts += '<option value="' + s + '"' + (grocActiveStore !== 'all' && grocActiveStore === s ? ' selected' : '') + '>' + s + '</option>'; });
+    storeSel.innerHTML = opts;
+  }
+}
+
+function grocSwitchStore(store) {
+  grocActiveStore = store;
+  renderGrocStoreTabs();
+  renderGroceries();
+}
+
+function grocManageStores() {
+  const action = prompt('Manage stores:\n\nCurrent: ' + groceryStores.join(', ') + '\n\nType a store name to add, or type "remove: StoreName" to remove one.');
+  if (!action || !action.trim()) return;
+  const trimmed = action.trim();
+  if (trimmed.toLowerCase().startsWith('remove:')) {
+    const toRemove = trimmed.substring(7).trim();
+    const idx = groceryStores.findIndex(s => s.toLowerCase() === toRemove.toLowerCase());
+    if (idx >= 0) {
+      groceryStores.splice(idx, 1);
+      saveGroceryStores();
+      if (grocActiveStore === toRemove) grocActiveStore = 'all';
+      showToast('Removed store: ' + toRemove);
+    } else {
+      showToast('Store not found: ' + toRemove);
+    }
+  } else {
+    if (!groceryStores.some(s => s.toLowerCase() === trimmed.toLowerCase())) {
+      groceryStores.push(trimmed);
+      saveGroceryStores();
+      showToast('Added store: ' + trimmed);
+    } else {
+      showToast('Store already exists');
+    }
+  }
+  renderGrocStoreTabs();
+  renderGroceries();
+}
+
 function renderGroceries() {
   const list = document.getElementById('grocList');
   if (!list) return;
-  if (groceryList.length === 0) {
-    list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted);font-size:13px">Your grocery list is empty. Add items above.</div>';
+  renderGrocStoreTabs();
+  // Filter by active store tab
+  let filtered = groceryList.map((item, i) => ({...item, _idx: i}));
+  if (grocActiveStore !== 'all') {
+    filtered = filtered.filter(item => item.store === grocActiveStore);
+  }
+  if (filtered.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted);font-size:13px">' + (grocActiveStore === 'all' ? 'Your grocery list is empty. Add items above.' : 'No items for ' + grocActiveStore + '.') + '</div>';
     return;
   }
   // Group by category
   const groups = {};
-  groceryList.forEach((item, i) => {
+  filtered.forEach(item => {
     const cat = item.category || 'other';
     if (!groups[cat]) groups[cat] = [];
-    groups[cat].push({...item, _idx: i});
+    groups[cat].push(item);
   });
   let html = '';
-  // Unchecked first, then checked
   grocCategories.forEach(cat => {
     if (!groups[cat]) return;
     const items = groups[cat];
     html += '<div class="groc-section-title">' + (grocCatLabels[cat] || cat) + '</div>';
     items.sort((a,b) => (a.checked?1:0) - (b.checked?1:0));
     items.forEach(item => {
+      const storeTag = item.store ? '<span class="groc-cat" style="background:rgba(147,52,230,0.15);color:var(--purple)">' + item.store + '</span>' : '';
       html += '<div class="groc-item' + (item.checked ? ' checked' : '') + '">'
         + '<div class="groc-check' + (item.checked ? ' done' : '') + '" onclick="grocToggle(' + item._idx + ')">' + (item.checked ? '✓' : '') + '</div>'
         + '<span class="groc-text">' + item.name + '</span>'
         + (item.qty ? '<span class="groc-qty">' + item.qty + '</span>' : '')
+        + storeTag
         + '<span class="groc-cat">' + (grocCatLabels[item.category] || '') + '</span>'
         + '<button class="groc-delete" onclick="grocDelete(' + item._idx + ')">&times;</button>'
         + '</div>';
@@ -14422,6 +14595,7 @@ function grocAdd() {
     name: name,
     qty: document.getElementById('grocNewQty').value.trim(),
     category: document.getElementById('grocNewCat').value,
+    store: document.getElementById('grocNewStore').value || '',
     checked: false
   });
   document.getElementById('grocNewItem').value = '';
@@ -14444,14 +14618,23 @@ function grocDelete(i) {
 }
 
 function grocClearChecked() {
-  groceryList = groceryList.filter(g => !g.checked);
+  if (grocActiveStore !== 'all') {
+    groceryList = groceryList.filter(g => !(g.checked && g.store === grocActiveStore));
+  } else {
+    groceryList = groceryList.filter(g => !g.checked);
+  }
   saveGroceries();
   renderGroceries();
 }
 
 function grocClearAll() {
-  if (!confirm('Clear entire grocery list?')) return;
-  groceryList = [];
+  const scope = grocActiveStore === 'all' ? 'entire grocery list' : grocActiveStore + ' items';
+  if (!confirm('Clear ' + scope + '?')) return;
+  if (grocActiveStore !== 'all') {
+    groceryList = groceryList.filter(g => g.store !== grocActiveStore);
+  } else {
+    groceryList = [];
+  }
   saveGroceries();
   renderGroceries();
 }
@@ -19203,7 +19386,7 @@ function pmAddTask(projId) {
       id: taskId, text: text, tag: tag, priority: priority,
       due: due, project: proj.name,
       hardDeadline: hardDeadline, recur: recur,
-      isFrog: false, is8020: false,
+      isFrog: false, is8020: false, isLifeChange: false,
       chainId: '', chainOrder: 0, chainTotal: 0,
       done: false, created: TODAY, completed: ''
     });
