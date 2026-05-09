@@ -4090,6 +4090,40 @@ const authReady = new Promise((resolve) => {
   });
 });
 
+// ===== TEMPORARY DEBUG TILE: shows Firebase UID for one-time copy =====
+// REMOVE THIS BLOCK after Firebase rules are locked down.
+(function showUidDebugTile() {
+  const tile = document.createElement('div');
+  tile.id = 'uidDebugTile';
+  tile.style.cssText = 'position:fixed;top:12px;right:12px;z-index:99999;background:#fef3c7;border:2px solid #b45309;border-radius:8px;padding:12px;font-family:ui-monospace,Menlo,monospace;font-size:12px;max-width:340px;box-shadow:0 4px 16px rgba(0,0,0,0.25)';
+  tile.innerHTML =
+    '<div style="font-weight:700;color:#92400e;margin-bottom:6px;font-family:system-ui,sans-serif">DEBUG: Desktop Firebase UID</div>' +
+    '<div id="uidDebugValue" style="word-break:break-all;color:#1f2937;margin-bottom:10px;background:#fff;padding:6px;border-radius:4px;border:1px solid #fcd34d">waiting for sign-in...</div>' +
+    '<button id="uidDebugCopyBtn" style="background:#b45309;color:#fff;border:0;padding:8px 12px;border-radius:4px;cursor:pointer;font-size:13px;width:100%;font-weight:600;font-family:system-ui,sans-serif">Copy UID</button>' +
+    '<div style="font-size:10px;color:#92400e;margin-top:8px;font-family:system-ui,sans-serif">Send to Claude. We delete this tile in the next batch.</div>';
+  function inject() {
+    if (!document.body) { setTimeout(inject, 50); return; }
+    document.body.appendChild(tile);
+    document.getElementById('uidDebugCopyBtn').addEventListener('click', () => {
+      const uid = window.__ccUID || '';
+      if (!uid) return;
+      const valEl = document.getElementById('uidDebugValue');
+      const p = navigator.clipboard ? navigator.clipboard.writeText(uid) : null;
+      if (p && p.then) {
+        p.then(() => { valEl.textContent = 'COPIED — paste it to Claude'; valEl.style.background = '#d1fae5'; valEl.style.borderColor = '#059669'; })
+         .catch(() => { valEl.textContent = uid + ' (select & copy manually)'; });
+      } else {
+        valEl.textContent = uid + ' (select & copy manually)';
+      }
+    });
+  }
+  inject();
+  authReady.then(user => {
+    const v = document.getElementById('uidDebugValue');
+    if (v) v.textContent = user.uid;
+  });
+})();
+
 // ===== DATA LAYER =====
 // Use LOCAL date, not UTC — prevents "tomorrow" bug after 8pm Eastern
 const _now = new Date();

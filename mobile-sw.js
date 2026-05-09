@@ -1,5 +1,5 @@
 // Mobile Command Service Worker
-const CACHE_NAME = 'mobile-command-v4-20260508-auth';
+const CACHE_NAME = 'mobile-command-v5-20260509-uidtile';
 const ASSETS = [
   './MobileCommand.html',
   './mobile-manifest.json',
