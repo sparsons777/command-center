@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cc-v9-20260509-locked';
+const CACHE_NAME = 'cc-v10-20260509-syncguard';
 const ASSETS = [
   './index.html',
   './manifest.json',

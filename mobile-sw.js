@@ -1,5 +1,5 @@
 // Mobile Command Service Worker
-const CACHE_NAME = 'mobile-command-v6-20260509-locked';
+const CACHE_NAME = 'mobile-command-v7-20260509-syncguard';
 const ASSETS = [
   './MobileCommand.html',
   './mobile-manifest.json',

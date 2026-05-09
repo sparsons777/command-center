@@ -4106,9 +4106,14 @@ function toFirebaseKey(k) { return k.replace(/\./g, '~'); }
 function fromFirebaseKey(k) { return k.replace(/~/g, '.'); }
 
 let _lastLocalWrite = 0;
+// Hard guard: NO writes to Firebase until we've confirmed initial sync.
+// Prevents fresh-device empty-defaults from overwriting cloud data (the 5/9 captureQueue incident).
+let firebaseInitialSyncDone = false;
+
 function setData(key, val) {
   localStorage.setItem(key, JSON.stringify(val));
   _lastLocalWrite = Date.now();
+  if (!firebaseInitialSyncDone) return; // local-only until initial sync confirms cloud state
   authReady.then(() => dbRef.ref('data/' + toFirebaseKey(key)).set(val));
 }
 
@@ -4117,24 +4122,152 @@ function debounce(fn, delay) {
   return function(...args) { clearTimeout(timer); timer = setTimeout(() => fn.apply(this, args), delay); };
 }
 
-// Real-time sync from Firebase (gated behind auth)
+// ===== INITIAL SYNC + REAL-TIME LISTENER (auth-gated) =====
 let firebaseLoaded = false;
 authReady.then(() => {
-  dbRef.ref('data').on('value', snap => {
-    if (Date.now() - _lastLocalWrite < 2000) return;
+  // Phase 1: one-shot initial pull. We MUST hear from Firebase before allowing any writes.
+  dbRef.ref('data').once('value').then(snap => {
     const allData = snap.val();
     if (allData) {
-      let changed = false;
       Object.keys(allData).forEach(k => {
         const localKey = fromFirebaseKey(k);
         const fbVal = JSON.stringify(allData[k]);
-        const localVal = localStorage.getItem(localKey);
-        if (fbVal !== localVal) { localStorage.setItem(localKey, fbVal); changed = true; }
+        if (fbVal !== localStorage.getItem(localKey)) localStorage.setItem(localKey, fbVal);
       });
-      if (changed || !firebaseLoaded) { firebaseLoaded = true; reloadAllData(); }
     }
+    firebaseInitialSyncDone = true;
+    firebaseLoaded = true;
+    if (typeof reloadAllData === 'function') reloadAllData();
+
+    // Phase 2: subscribe to real-time updates AFTER initial sync.
+    dbRef.ref('data').on('value', snap2 => {
+      if (Date.now() - _lastLocalWrite < 2000) return;
+      const data2 = snap2.val();
+      if (data2) {
+        let changed = false;
+        Object.keys(data2).forEach(k => {
+          const localKey = fromFirebaseKey(k);
+          const fbVal = JSON.stringify(data2[k]);
+          if (fbVal !== localStorage.getItem(localKey)) { localStorage.setItem(localKey, fbVal); changed = true; }
+        });
+        if (changed) reloadAllData();
+      }
+    });
+
+    // Phase 3: kick off automatic backup snapshots.
+    if (typeof scheduleBackupSnapshots === 'function') scheduleBackupSnapshots();
+  }).catch(err => {
+    console.error('[Command Center] Initial Firebase sync failed:', err);
+    // Leave firebaseInitialSyncDone = false so we don't risk overwriting cloud data.
+    // App still works locally; will recover on next reload when sync succeeds.
   });
 });
+
+// ===== AUTOMATIC FIREBASE SNAPSHOT BACKUPS =====
+// Snapshots full localStorage to Firebase under /backups/<timestamp>. Keeps last 20.
+// Recovery from a wipe: read /backups/<timestamp> and restore to /data/.
+function takeFirebaseSnapshot(reason) {
+  if (!firebaseInitialSyncDone) return;
+  const localData = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    try { localData[toFirebaseKey(k)] = JSON.parse(localStorage.getItem(k)); }
+    catch { /* skip non-JSON keys */ }
+  }
+  const ts = new Date().toISOString().replace(/[:.]/g, '-');
+  const payload = { takenAt: new Date().toISOString(), reason: reason || 'auto', source: 'desktop', data: localData };
+  authReady.then(() => {
+    dbRef.ref('backups/' + ts).set(payload).then(() => {
+      // Prune to last 20 snapshots.
+      dbRef.ref('backups').orderByKey().once('value').then(s => {
+        const keys = Object.keys(s.val() || {}).sort();
+        if (keys.length > 20) {
+          keys.slice(0, keys.length - 20).forEach(k => dbRef.ref('backups/' + k).remove());
+        }
+      });
+    }).catch(e => console.error('[Backup] Snapshot failed:', e));
+  });
+}
+function scheduleBackupSnapshots() {
+  // Snapshot 10 seconds after first sync, then every 30 minutes.
+  setTimeout(() => takeFirebaseSnapshot('boot'), 10000);
+  setInterval(() => takeFirebaseSnapshot('interval'), 30 * 60 * 1000);
+  // Also snapshot on tab close/hide (user about to leave).
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') takeFirebaseSnapshot('hide');
+  });
+}
+
+// ===== MANUAL LOCAL BACKUP (download JSON to disk) =====
+function downloadLocalBackup() {
+  const localData = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    try { localData[k] = JSON.parse(localStorage.getItem(k)); }
+    catch { localData[k] = localStorage.getItem(k); }
+  }
+  const payload = { exportedAt: new Date().toISOString(), source: 'LifeCRM-desktop', data: localData };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'command-center-backup-' + new Date().toISOString().replace(/[:.]/g, '-') + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// ===== MANUAL LOCAL RESTORE (upload JSON, restore to localStorage + Firebase) =====
+function restoreLocalBackup(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      const data = parsed.data || parsed; // support both wrapped and raw
+      if (!confirm('Restore backup from ' + (parsed.exportedAt || 'unknown date') + '? This will overwrite ALL current data on this device AND in Firebase.')) return;
+      // Take a safety snapshot of current state first.
+      takeFirebaseSnapshot('pre-restore');
+      // Restore to localStorage.
+      Object.keys(data).forEach(k => {
+        try { localStorage.setItem(k, typeof data[k] === 'string' ? data[k] : JSON.stringify(data[k])); }
+        catch (err) { console.error('Restore key failed', k, err); }
+      });
+      // Push to Firebase.
+      authReady.then(() => {
+        const fbData = {};
+        Object.keys(data).forEach(k => { fbData[toFirebaseKey(k)] = data[k]; });
+        dbRef.ref('data').set(fbData).then(() => {
+          alert('Restore complete. Reloading...');
+          location.reload();
+        }).catch(err => alert('Firebase restore failed: ' + err.message));
+      });
+    } catch (err) {
+      alert('Invalid backup file: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ===== BACKUP / RESTORE BUTTON (pinned bottom-right) =====
+(function addBackupButton() {
+  function inject() {
+    if (!document.body) { setTimeout(inject, 50); return; }
+    const wrap = document.createElement('div');
+    wrap.id = 'backupControls';
+    wrap.style.cssText = 'position:fixed;bottom:14px;right:14px;z-index:99998;display:flex;gap:8px;font-family:system-ui,sans-serif';
+    wrap.innerHTML =
+      '<input type="file" id="backupRestoreInput" accept="application/json" style="display:none">' +
+      '<button id="backupDownloadBtn" title="Download a JSON backup of all your data" style="background:#1f2937;color:#fff;border:0;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.2)">Backup</button>' +
+      '<button id="backupRestoreBtn" title="Restore from a JSON backup file" style="background:#374151;color:#fff;border:0;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.2)">Restore</button>';
+    document.body.appendChild(wrap);
+    document.getElementById('backupDownloadBtn').addEventListener('click', downloadLocalBackup);
+    document.getElementById('backupRestoreBtn').addEventListener('click', () => document.getElementById('backupRestoreInput').click());
+    document.getElementById('backupRestoreInput').addEventListener('change', e => restoreLocalBackup(e.target.files[0]));
+  }
+  inject();
+})();
 
 function reloadAllData() {
   tasks = getData('allTasks', tasks);

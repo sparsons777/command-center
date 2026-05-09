@@ -637,36 +637,94 @@ function toFirebaseKey(k) { return k.replace(/\./g, '~'); }
 function fromFirebaseKey(k) { return k.replace(/~/g, '.'); }
 
 let _lastLocalWrite = 0;
+// Hard guard: NO writes to Firebase until initial sync confirms cloud state.
+// Prevents fresh-device empty-defaults from overwriting cloud data (the 5/9 captureQueue incident).
+let firebaseInitialSyncDone = false;
+
 function setData(key, val) {
   localStorage.setItem(key, JSON.stringify(val));
   _lastLocalWrite = Date.now();
+  if (!firebaseInitialSyncDone) return; // local-only until initial sync confirms cloud state
   authReady.then(() => dbRef.ref('data/' + toFirebaseKey(key)).set(val));
 }
 
-// ===== REAL-TIME SYNC (gated behind auth) =====
+// ===== INITIAL SYNC + REAL-TIME LISTENER (auth-gated) =====
 let firebaseLoaded = false;
 const syncEl = document.getElementById('syncIndicator');
 
 authReady.then(() => {
-  dbRef.ref('data').on('value', snap => {
-    if (Date.now() - _lastLocalWrite < 2000) return;
+  // Phase 1: one-shot initial pull. We MUST hear from Firebase before allowing any writes.
+  dbRef.ref('data').once('value').then(snap => {
     const allData = snap.val();
     if (allData) {
-      let changed = false;
       Object.keys(allData).forEach(k => {
         const localKey = fromFirebaseKey(k);
         const fbVal = JSON.stringify(allData[k]);
-        const localVal = localStorage.getItem(localKey);
-        if (fbVal !== localVal) { localStorage.setItem(localKey, fbVal); changed = true; }
+        if (fbVal !== localStorage.getItem(localKey)) localStorage.setItem(localKey, fbVal);
       });
-      if (changed || !firebaseLoaded) { firebaseLoaded = true; reloadData(); }
     }
+    firebaseInitialSyncDone = true;
+    firebaseLoaded = true;
+    if (typeof reloadData === 'function') reloadData();
     if (syncEl) syncEl.className = 'top-bar-sync';
-  });
-  dbRef.ref('.info/connected').on('value', snap => {
-    if (syncEl) syncEl.className = snap.val() ? 'top-bar-sync' : 'top-bar-sync offline';
+
+    // Phase 2: subscribe to real-time updates AFTER initial sync.
+    dbRef.ref('data').on('value', snap2 => {
+      if (Date.now() - _lastLocalWrite < 2000) return;
+      const data2 = snap2.val();
+      if (data2) {
+        let changed = false;
+        Object.keys(data2).forEach(k => {
+          const localKey = fromFirebaseKey(k);
+          const fbVal = JSON.stringify(data2[k]);
+          if (fbVal !== localStorage.getItem(localKey)) { localStorage.setItem(localKey, fbVal); changed = true; }
+        });
+        if (changed) reloadData();
+      }
+      if (syncEl) syncEl.className = 'top-bar-sync';
+    });
+
+    dbRef.ref('.info/connected').on('value', s => {
+      if (syncEl) syncEl.className = s.val() ? 'top-bar-sync' : 'top-bar-sync offline';
+    });
+
+    // Phase 3: kick off automatic backup snapshots from mobile too.
+    if (typeof scheduleBackupSnapshots === 'function') scheduleBackupSnapshots();
+  }).catch(err => {
+    console.error('[Mobile Command] Initial Firebase sync failed:', err);
+    // Leave firebaseInitialSyncDone = false so we don't risk overwriting cloud data.
   });
 });
+
+// ===== AUTOMATIC FIREBASE SNAPSHOT BACKUPS =====
+function takeFirebaseSnapshot(reason) {
+  if (!firebaseInitialSyncDone) return;
+  const localData = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    try { localData[toFirebaseKey(k)] = JSON.parse(localStorage.getItem(k)); }
+    catch { /* skip non-JSON keys */ }
+  }
+  const ts = new Date().toISOString().replace(/[:.]/g, '-');
+  const payload = { takenAt: new Date().toISOString(), reason: reason || 'auto', source: 'mobile', data: localData };
+  authReady.then(() => {
+    dbRef.ref('backups/' + ts).set(payload).then(() => {
+      dbRef.ref('backups').orderByKey().once('value').then(s => {
+        const keys = Object.keys(s.val() || {}).sort();
+        if (keys.length > 20) {
+          keys.slice(0, keys.length - 20).forEach(k => dbRef.ref('backups/' + k).remove());
+        }
+      });
+    }).catch(e => console.error('[Backup] Snapshot failed:', e));
+  });
+}
+function scheduleBackupSnapshots() {
+  setTimeout(() => takeFirebaseSnapshot('boot'), 10000);
+  setInterval(() => takeFirebaseSnapshot('interval'), 30 * 60 * 1000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') takeFirebaseSnapshot('hide');
+  });
+}
 
 // ===== CORE DATA =====
 let tasks = getData('allTasks', []);
