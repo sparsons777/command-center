@@ -623,40 +623,6 @@ const authReady = new Promise((resolve) => {
   });
 });
 
-// ===== TEMPORARY DEBUG TILE: shows Firebase UID for one-time copy =====
-// REMOVE THIS BLOCK after Firebase rules are locked down.
-(function showUidDebugTile() {
-  const tile = document.createElement('div');
-  tile.id = 'uidDebugTile';
-  tile.style.cssText = 'position:fixed;top:8px;left:8px;right:8px;z-index:99999;background:#fef3c7;border:2px solid #b45309;border-radius:10px;padding:14px;font-family:ui-monospace,Menlo,monospace;font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,0.25)';
-  tile.innerHTML =
-    '<div style="font-weight:700;color:#92400e;margin-bottom:8px;font-family:system-ui,sans-serif;font-size:14px">DEBUG: Phone Firebase UID</div>' +
-    '<div id="uidDebugValue" style="word-break:break-all;color:#1f2937;margin-bottom:12px;background:#fff;padding:8px;border-radius:6px;border:1px solid #fcd34d;font-size:12px">waiting for sign-in...</div>' +
-    '<button id="uidDebugCopyBtn" style="background:#b45309;color:#fff;border:0;padding:14px 12px;border-radius:6px;cursor:pointer;font-size:15px;width:100%;font-weight:700;font-family:system-ui,sans-serif">Copy UID</button>' +
-    '<div style="font-size:11px;color:#92400e;margin-top:10px;font-family:system-ui,sans-serif;text-align:center">Tap Copy, then send to Claude. Tile goes away next batch.</div>';
-  function inject() {
-    if (!document.body) { setTimeout(inject, 50); return; }
-    document.body.appendChild(tile);
-    document.getElementById('uidDebugCopyBtn').addEventListener('click', () => {
-      const uid = window.__ccUID || '';
-      if (!uid) return;
-      const valEl = document.getElementById('uidDebugValue');
-      const p = navigator.clipboard ? navigator.clipboard.writeText(uid) : null;
-      if (p && p.then) {
-        p.then(() => { valEl.textContent = 'COPIED — paste it to Claude'; valEl.style.background = '#d1fae5'; valEl.style.borderColor = '#059669'; })
-         .catch(() => { valEl.textContent = uid + ' (long-press to select & copy)'; });
-      } else {
-        valEl.textContent = uid + ' (long-press to select & copy)';
-      }
-    });
-  }
-  inject();
-  authReady.then(user => {
-    const v = document.getElementById('uidDebugValue');
-    if (v) v.textContent = user.uid;
-  });
-})();
-
 // ===== DATA LAYER =====
 const _now = new Date();
 const TODAY = _now.getFullYear() + '-' + String(_now.getMonth()+1).padStart(2,'0') + '-' + String(_now.getDate()).padStart(2,'0');

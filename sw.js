@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cc-v8-20260509-uidtile';
+const CACHE_NAME = 'cc-v9-20260509-locked';
 const ASSETS = [
   './index.html',
   './manifest.json',
