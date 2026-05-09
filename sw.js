@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cc-v6-20260508';
+const CACHE_NAME = 'cc-v7-20260508-auth';
 const ASSETS = [
   './index.html',
   './manifest.json',

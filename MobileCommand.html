@@ -593,6 +593,7 @@ body {
 <!-- ===== FIREBASE ===== -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script>
 // ===== FIREBASE INIT =====
 firebase.initializeApp({
@@ -605,6 +606,22 @@ firebase.initializeApp({
   appId: "1:284252023636:web:c7d6a5c213ffd7761836c1"
 });
 const dbRef = firebase.database();
+
+// ===== FIREBASE AUTH (Anonymous — locks DB to your specific device UIDs) =====
+firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+const authReady = new Promise((resolve) => {
+  firebase.auth().onAuthStateChanged((user) => {
+    if (user) {
+      console.log('[Mobile Command] Firebase Auth UID:', user.uid);
+      window.__ccUID = user.uid; // expose for easy copy from console
+      resolve(user);
+    } else {
+      firebase.auth().signInAnonymously().catch(err => {
+        console.error('[Mobile Command] Anonymous sign-in failed:', err);
+      });
+    }
+  });
+});
 
 // ===== DATA LAYER =====
 const _now = new Date();
@@ -623,30 +640,32 @@ let _lastLocalWrite = 0;
 function setData(key, val) {
   localStorage.setItem(key, JSON.stringify(val));
   _lastLocalWrite = Date.now();
-  dbRef.ref('data/' + toFirebaseKey(key)).set(val);
+  authReady.then(() => dbRef.ref('data/' + toFirebaseKey(key)).set(val));
 }
 
-// ===== REAL-TIME SYNC =====
+// ===== REAL-TIME SYNC (gated behind auth) =====
 let firebaseLoaded = false;
 const syncEl = document.getElementById('syncIndicator');
 
-dbRef.ref('data').on('value', snap => {
-  if (Date.now() - _lastLocalWrite < 2000) return;
-  const allData = snap.val();
-  if (allData) {
-    let changed = false;
-    Object.keys(allData).forEach(k => {
-      const localKey = fromFirebaseKey(k);
-      const fbVal = JSON.stringify(allData[k]);
-      const localVal = localStorage.getItem(localKey);
-      if (fbVal !== localVal) { localStorage.setItem(localKey, fbVal); changed = true; }
-    });
-    if (changed || !firebaseLoaded) { firebaseLoaded = true; reloadData(); }
-  }
-  if (syncEl) syncEl.className = 'top-bar-sync';
-});
-dbRef.ref('.info/connected').on('value', snap => {
-  if (syncEl) syncEl.className = snap.val() ? 'top-bar-sync' : 'top-bar-sync offline';
+authReady.then(() => {
+  dbRef.ref('data').on('value', snap => {
+    if (Date.now() - _lastLocalWrite < 2000) return;
+    const allData = snap.val();
+    if (allData) {
+      let changed = false;
+      Object.keys(allData).forEach(k => {
+        const localKey = fromFirebaseKey(k);
+        const fbVal = JSON.stringify(allData[k]);
+        const localVal = localStorage.getItem(localKey);
+        if (fbVal !== localVal) { localStorage.setItem(localKey, fbVal); changed = true; }
+      });
+      if (changed || !firebaseLoaded) { firebaseLoaded = true; reloadData(); }
+    }
+    if (syncEl) syncEl.className = 'top-bar-sync';
+  });
+  dbRef.ref('.info/connected').on('value', snap => {
+    if (syncEl) syncEl.className = snap.val() ? 'top-bar-sync' : 'top-bar-sync offline';
+  });
 });
 
 // ===== CORE DATA =====
