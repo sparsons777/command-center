@@ -731,8 +731,10 @@ authReady.then(() => {
     if (syncEl) syncEl.className = 'top-bar-sync';
 
     // Phase 2: subscribe to real-time updates AFTER initial sync.
+    // NOTE: no time-based guard — content comparison handles echo prevention.
+    // (The old 2-second guard was silently dropping remote updates that arrived
+    // during active local typing/clicking — see 5/12 sync bug.)
     dbRef.ref('data').on('value', snap2 => {
-      if (Date.now() - _lastLocalWrite < 2000) return;
       const data2 = snap2.val();
       if (data2) {
         let changed = false;

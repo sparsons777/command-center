@@ -4243,8 +4243,11 @@ authReady.then(() => {
     if (typeof reloadAllData === 'function') reloadAllData();
 
     // Phase 2: subscribe to real-time updates AFTER initial sync.
+    // NOTE: we deliberately do NOT guard by _lastLocalWrite time anymore — the
+    // content comparison below already prevents echo loops (identical values
+    // are no-ops). The old 2-second guard was silently dropping legitimate
+    // remote updates that arrived while the user was actively typing/clicking.
     dbRef.ref('data').on('value', snap2 => {
-      if (Date.now() - _lastLocalWrite < 2000) return;
       const data2 = snap2.val();
       if (data2) {
         let changed = false;
