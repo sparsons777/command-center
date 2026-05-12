@@ -674,8 +674,15 @@ function hideSignInModal() {
 
 const authReady = new Promise((resolve) => {
   firebase.auth().onAuthStateChanged((user) => {
+    // DEFENSIVE CHECK: force sign-out of any stale anonymous session.
+    // (See LifeCRM.html for the full explanation of the 5/12 trap this closes.)
+    if (user && user.isAnonymous) {
+      console.warn('[Mobile Command] Stale anonymous session detected (UID:', user.uid, ') — signing out.');
+      firebase.auth().signOut().catch(err => console.error('[Mobile Command] Anon sign-out failed:', err));
+      return;
+    }
     if (user) {
-      console.log('[Mobile Command] Firebase Auth UID:', user.uid, '(' + (user.isAnonymous ? 'anonymous' : user.email) + ')');
+      console.log('[Mobile Command] Firebase Auth UID:', user.uid, '(' + user.email + ')');
       window.__ccUID = user.uid;
       hideSignInModal();
       resolve(user);

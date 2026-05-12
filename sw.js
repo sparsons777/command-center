@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cc-v12-20260512-syncfix';
+const CACHE_NAME = 'cc-v13-20260512-anonguard';
 const ASSETS = [
   './index.html',
   './manifest.json',

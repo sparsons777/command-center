@@ -4181,8 +4181,18 @@ function hideSignInModal() {
 
 const authReady = new Promise((resolve) => {
   firebase.auth().onAuthStateChanged((user) => {
+    // DEFENSIVE CHECK: we migrated entirely to email/password and locked the
+    // Firebase rules to that single UID. If a stale anonymous session somehow
+    // resurfaces (e.g., cached IndexedDB on file://), it would silently fail
+    // every read/write and trap the user in a broken state. Force a sign-out
+    // and let the next onAuthStateChanged tick (user=null) show the modal.
+    if (user && user.isAnonymous) {
+      console.warn('[Command Center] Stale anonymous session detected (UID:', user.uid, ') — signing out, prompting for email/password.');
+      firebase.auth().signOut().catch(err => console.error('[Command Center] Anon sign-out failed:', err));
+      return;
+    }
     if (user) {
-      console.log('[Command Center] Firebase Auth UID:', user.uid, '(' + (user.isAnonymous ? 'anonymous' : user.email) + ')');
+      console.log('[Command Center] Firebase Auth UID:', user.uid, '(' + user.email + ')');
       window.__ccUID = user.uid;
       hideSignInModal();
       resolve(user);
