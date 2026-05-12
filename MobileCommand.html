@@ -1600,8 +1600,39 @@ function renderAll() {
 }
 renderAll();
 
-// Service worker
-if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./mobile-sw.js').catch(() => {}); }
+// ===== SERVICE WORKER WITH AUTO-UPDATE =====
+// On every load, ask the browser to bypass HTTP cache for the SW file
+// (updateViaCache: 'none') so we always re-check for a new version.
+// When a new SW is detected, install it, send SKIP_WAITING, then auto-reload
+// once it takes control. End result: pushing new code = next refresh shows it,
+// no clear-data-and-reinstall dance.
+if ('serviceWorker' in navigator) {
+  let _swReloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (_swReloading) return;
+    _swReloading = true;
+    console.log('[Mobile Command] New service worker active — reloading for fresh code.');
+    window.location.reload();
+  });
+
+  navigator.serviceWorker.register('./mobile-sw.js', { updateViaCache: 'none' }).then(reg => {
+    // Force an update check on every page load.
+    reg.update().catch(() => {});
+
+    // When a new worker is found, push it to activate as soon as it's installed.
+    reg.addEventListener('updatefound', () => {
+      const incoming = reg.installing;
+      if (!incoming) return;
+      incoming.addEventListener('statechange', () => {
+        if (incoming.state === 'installed' && navigator.serviceWorker.controller) {
+          // There's an existing controller, so this is an UPDATE (not first install).
+          // Tell the new worker to take over immediately.
+          incoming.postMessage('SKIP_WAITING');
+        }
+      });
+    });
+  }).catch(err => console.error('[Mobile Command] SW register failed:', err));
+}
 </script>
 </body>
 </html>
