@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cc-v10-20260509-syncguard';
+const CACHE_NAME = 'cc-v11-20260510-emailauth';
 const ASSETS = [
   './index.html',
   './manifest.json',

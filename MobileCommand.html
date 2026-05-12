@@ -607,18 +607,80 @@ firebase.initializeApp({
 });
 const dbRef = firebase.database();
 
-// ===== FIREBASE AUTH (Anonymous — locks DB to your specific device UIDs) =====
+// ===== FIREBASE AUTH (Email/Password — stable identity across devices & storage wipes) =====
 firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
+function createSignInModal() {
+  if (document.getElementById('signInOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'signInOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:999999;background:#0f172a;display:none;align-items:center;justify-content:center;font-family:system-ui,sans-serif;padding:20px';
+  overlay.innerHTML =
+    '<div style="width:100%;max-width:380px">' +
+      '<div style="font-size:24px;font-weight:700;color:#fff;margin-bottom:6px;text-align:center">Command Center</div>' +
+      '<div style="font-size:13px;color:#94a3b8;margin-bottom:24px;text-align:center">Sign in to access your data</div>' +
+      '<label style="display:block;font-size:12px;font-weight:600;color:#cbd5e1;margin-bottom:6px">Email</label>' +
+      '<input id="signInEmail" type="email" autocomplete="username" style="width:100%;padding:14px 12px;border:1px solid #334155;background:#1e293b;color:#fff;border-radius:8px;font-size:16px;margin-bottom:14px;box-sizing:border-box">' +
+      '<label style="display:block;font-size:12px;font-weight:600;color:#cbd5e1;margin-bottom:6px">Password</label>' +
+      '<input id="signInPassword" type="password" autocomplete="current-password" style="width:100%;padding:14px 12px;border:1px solid #334155;background:#1e293b;color:#fff;border-radius:8px;font-size:16px;margin-bottom:18px;box-sizing:border-box">' +
+      '<button id="signInButton" style="width:100%;padding:14px;background:#3b82f6;color:#fff;border:0;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer">Sign In</button>' +
+      '<div id="signInError" style="font-size:13px;color:#fca5a5;margin-top:14px;display:none;text-align:center"></div>' +
+    '</div>';
+  function attach() {
+    if (!document.body) { setTimeout(attach, 50); return; }
+    document.body.appendChild(overlay);
+    const emailInput = document.getElementById('signInEmail');
+    const passwordInput = document.getElementById('signInPassword');
+    const signInBtn = document.getElementById('signInButton');
+    const errorEl = document.getElementById('signInError');
+    function doSignIn() {
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+      if (!email || !password) {
+        errorEl.textContent = 'Email and password required.';
+        errorEl.style.display = 'block';
+        return;
+      }
+      signInBtn.disabled = true;
+      signInBtn.textContent = 'Signing in...';
+      errorEl.style.display = 'none';
+      firebase.auth().signInWithEmailAndPassword(email, password).catch(err => {
+        signInBtn.disabled = false;
+        signInBtn.textContent = 'Sign In';
+        errorEl.textContent = err.message;
+        errorEl.style.display = 'block';
+      });
+    }
+    signInBtn.addEventListener('click', doSignIn);
+    passwordInput.addEventListener('keydown', e => { if (e.key === 'Enter') doSignIn(); });
+    emailInput.addEventListener('keydown', e => { if (e.key === 'Enter') passwordInput.focus(); });
+  }
+  attach();
+}
+function showSignInModal() {
+  createSignInModal();
+  const overlay = document.getElementById('signInOverlay');
+  if (overlay) {
+    overlay.style.display = 'flex';
+    setTimeout(() => { const el = document.getElementById('signInEmail'); if (el) el.focus(); }, 100);
+  } else {
+    setTimeout(showSignInModal, 100);
+  }
+}
+function hideSignInModal() {
+  const overlay = document.getElementById('signInOverlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
 const authReady = new Promise((resolve) => {
   firebase.auth().onAuthStateChanged((user) => {
     if (user) {
-      console.log('[Mobile Command] Firebase Auth UID:', user.uid);
-      window.__ccUID = user.uid; // expose for easy copy from console
+      console.log('[Mobile Command] Firebase Auth UID:', user.uid, '(' + (user.isAnonymous ? 'anonymous' : user.email) + ')');
+      window.__ccUID = user.uid;
+      hideSignInModal();
       resolve(user);
     } else {
-      firebase.auth().signInAnonymously().catch(err => {
-        console.error('[Mobile Command] Anonymous sign-in failed:', err);
-      });
+      showSignInModal();
     }
   });
 });
