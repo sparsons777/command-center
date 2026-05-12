@@ -14395,9 +14395,12 @@ function renderQueue() {
     } else if (badge) { badge.remove(); }
   });
 
-  // Badge
+  // Sidebar badge — count ONLY the To Do tab items, not Ideas/Groceries/Wishlist.
+  // Save & Hold items that have been recategorized shouldn't inflate the badge
+  // because part of the morning routine is "address Capture Queue" = todos only.
   const navBadge = document.getElementById('navQueueBadge');
-  if (navBadge) { navBadge.textContent = pending.length; navBadge.style.display = pending.length > 0 ? '' : 'none'; }
+  const todoCount = pending.filter(i => i.category === 'todo').length;
+  if (navBadge) { navBadge.textContent = todoCount; navBadge.style.display = todoCount > 0 ? '' : 'none'; }
 
   // Filter
   const filtered = queueFilter === 'all' ? pending : pending.filter(i => i.category === queueFilter);
