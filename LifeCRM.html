@@ -143,6 +143,24 @@
   .kpi-value{font-size:26px;font-weight:800;background:linear-gradient(135deg,#1a1a2e,#b8860b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
   .kpi-sub{font-size:11px;color:var(--text-dim);margin-top:4px}
 
+  /* Velocity tile (replaces single-number Tasks Left) */
+  .velocity-card{padding:14px 16px}
+  .velocity-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:6px}
+  .velocity-header .kpi-label{margin-bottom:0}
+  .velocity-toggle{display:flex;gap:3px;flex-wrap:nowrap}
+  .vel-pill{background:transparent;border:1px solid var(--glass-border);color:var(--text-dim);font-size:9px;padding:3px 7px;border-radius:5px;cursor:pointer;text-transform:uppercase;letter-spacing:0.6px;font-weight:600;transition:all 0.15s}
+  .vel-pill:hover{color:var(--text);border-color:var(--accent)}
+  .vel-pill.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .velocity-stats{display:flex;gap:8px;align-items:flex-end}
+  .vel-stat{flex:1;text-align:center}
+  .vel-stat-value{font-size:22px;font-weight:800;line-height:1.05;font-variant-numeric:tabular-nums}
+  .vel-added{color:#fbbf24}
+  .vel-completed{color:var(--green)}
+  .vel-net{color:var(--text-dim)}
+  .vel-net.positive{color:var(--green)}
+  .vel-net.negative{color:var(--red)}
+  .vel-stat-label{font-size:9px;color:var(--text-dim);margin-top:4px;text-transform:uppercase;letter-spacing:1px;font-weight:600}
+
   /* Quick Capture Bar */
   /* Hot Buttons */
   .hot-buttons{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
@@ -2057,10 +2075,31 @@ function ico(name, size, color) {
 
   <!-- KPI Row -->
   <div class="kpi-row">
-    <div class="kpi-card">
-      <div class="kpi-label">Tasks Left</div>
-      <div class="kpi-value" style="color:var(--accent)" id="kpiTasks">0</div>
-      <div class="kpi-sub" id="kpiTasksSub">—</div>
+    <div class="kpi-card velocity-card">
+      <div class="velocity-header">
+        <div class="kpi-label">Velocity</div>
+        <div class="velocity-toggle" id="velocityToggle">
+          <button class="vel-pill" data-period="day">Day</button>
+          <button class="vel-pill active" data-period="week">Week</button>
+          <button class="vel-pill" data-period="month">Month</button>
+          <button class="vel-pill" data-period="all">All</button>
+        </div>
+      </div>
+      <div class="velocity-stats">
+        <div class="vel-stat">
+          <div class="vel-stat-value vel-added" id="velAdded">0</div>
+          <div class="vel-stat-label">Added</div>
+        </div>
+        <div class="vel-stat">
+          <div class="vel-stat-value vel-completed" id="velCompleted">0</div>
+          <div class="vel-stat-label">Done</div>
+        </div>
+        <div class="vel-stat">
+          <div class="vel-stat-value vel-net" id="velNet">0</div>
+          <div class="vel-stat-label">Net</div>
+        </div>
+      </div>
+      <div class="kpi-sub" id="velSub" style="margin-top:8px">This week · Mon–Sun</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-label">Win The Day</div>
@@ -8898,17 +8937,88 @@ function renderTaskTrendChart() {
   drawLine('#6366f1', 'active');
 }
 
+// ===== VELOCITY TILE =====
+// Shows Added / Completed / Net for a selectable period.
+// Counters use task.created (when task was added) and task.completed (when marked done).
+let velocityPeriod = getData('velocityPeriod', 'week'); // 'day' | 'week' | 'month' | 'all'
+
+function _velMondayOfWeek(date) {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const day = d.getDay(); // 0=Sun ... 6=Sat
+  const diff = day === 0 ? -6 : 1 - day; // distance back to Monday
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+function _velDateInPeriod(dateStr, period, now) {
+  if (!dateStr) return false;
+  if (period === 'all') return true;
+  if (period === 'day') return dateStr === TODAY;
+  // Parse 'YYYY-MM-DD' as a local date.
+  const parts = String(dateStr).split('-');
+  if (parts.length < 3) return false;
+  const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  if (period === 'week') {
+    const monday = _velMondayOfWeek(now);
+    const nextMonday = new Date(monday); nextMonday.setDate(monday.getDate() + 7);
+    return d >= monday && d < nextMonday;
+  }
+  if (period === 'month') {
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  }
+  return false;
+}
+function _velPeriodLabel(period) {
+  if (period === 'day') return 'Today';
+  if (period === 'week') return 'This week · Mon–Sun';
+  if (period === 'month') return 'This month';
+  if (period === 'all') return 'All time';
+  return '';
+}
+function renderVelocityTile() {
+  const now = new Date();
+  const added = (tasks || []).filter(t => _velDateInPeriod(t.created, velocityPeriod, now)).length;
+  const completed = (tasks || []).filter(t => t.done && _velDateInPeriod(t.completed, velocityPeriod, now)).length;
+  const net = completed - added;
+  const addedEl = document.getElementById('velAdded');
+  const completedEl = document.getElementById('velCompleted');
+  const netEl = document.getElementById('velNet');
+  const subEl = document.getElementById('velSub');
+  if (addedEl) addedEl.textContent = added;
+  if (completedEl) completedEl.textContent = completed;
+  if (netEl) {
+    netEl.textContent = (net > 0 ? '+' : '') + net;
+    netEl.classList.remove('positive', 'negative');
+    if (net > 0) netEl.classList.add('positive');
+    else if (net < 0) netEl.classList.add('negative');
+  }
+  if (subEl) subEl.textContent = _velPeriodLabel(velocityPeriod);
+  // Sync active pill button
+  document.querySelectorAll('#velocityToggle .vel-pill').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.period === velocityPeriod);
+  });
+}
+function setVelocityPeriod(period) {
+  velocityPeriod = period;
+  setData('velocityPeriod', period);
+  renderVelocityTile();
+}
+// Wire pill clicks once DOM is ready.
+(function _bindVelocityPills() {
+  function bind() {
+    const toggle = document.getElementById('velocityToggle');
+    if (!toggle) { setTimeout(bind, 100); return; }
+    toggle.addEventListener('click', e => {
+      const btn = e.target.closest('.vel-pill');
+      if (!btn) return;
+      setVelocityPeriod(btn.dataset.period);
+    });
+  }
+  bind();
+})();
+
 function updateDashboard() {
-  // Tasks KPI
-  const pending = tasks.filter(t => !t.done).length;
-  const doneToday = tasks.filter(t => t.done && t.completed === TODAY).length;
-  const addedToday = tasks.filter(t => t.created === TODAY).length;
-  const totalWins = winsJournal.filter(w => w.date === TODAY).length;
-  document.getElementById('kpiTasks').textContent = pending;
-  const subParts = [];
-  if (doneToday > 0) subParts.push(doneToday + ' done');
-  if (addedToday > 0) subParts.push(addedToday + ' added');
-  document.getElementById('kpiTasksSub').textContent = subParts.length > 0 ? subParts.join(' · ') + ' today' : 'Get after it';
+  // Velocity tile — Added / Completed / Net for selected period
+  renderVelocityTile();
 
   // Life Score KPI
   const scoreVals = areas.map(a => areaScores[a.name] || 1);
