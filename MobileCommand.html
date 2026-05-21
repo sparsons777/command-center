@@ -447,6 +447,33 @@ body {
       <div class="home-box-label">Mortgage Calc</div>
       <div class="home-box-count">Run the numbers</div>
     </div>
+    <div class="home-box claudebox" data-tile="claude" draggable="true" onclick="goTo('claude')">
+      <div class="home-box-icon">&#128172;</div>
+      <div class="home-box-label">Notes to Claude</div>
+      <div class="home-box-count" id="homeClaudeCount">0 pending</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PAGE: NOTES TO CLAUDE ===== -->
+<div class="page" id="page-claude">
+  <div class="quick-add-area">
+    <div style="font-size:13px;color:var(--text-dim);margin-bottom:8px;text-align:center">
+      Capture anything you want Claude to see in your next session.<br>
+      Voice or text. Hit send.
+    </div>
+    <textarea class="quick-add-textarea" id="claudeInput" placeholder="Type or speak a note to Claude..." rows="6"></textarea>
+    <div class="qa-hero-row">
+      <div class="qa-mic-wrap">
+        <button class="qa-mic-btn" id="claudeMicBtn" onclick="startClaudeVoice()">&#127908;</button>
+        <div class="qa-mic-label" id="claudeMicLabel">Tap to speak</div>
+      </div>
+      <div class="qa-save-wrap">
+        <button class="qa-save-btn" onclick="sendToClaude()">&#10003;</button>
+        <div class="qa-save-label">Send</div>
+      </div>
+    </div>
+    <div id="claudeInboxList" style="margin-top:18px"></div>
   </div>
 </div>
 
@@ -807,6 +834,7 @@ let captureQueue = getData('captureQueue', []);
 let groceryList = getData('groceryList', []);
 let groceryStores = getData('groceryStores', ['Aldi', 'Kroger', 'WalMart', "Sam's Club"]);
 let mGrocActiveStore = 'all';
+let claudeInbox = getData('claudeInbox', []);
 
 function reloadData() {
   tasks = getData('allTasks', []);
@@ -817,6 +845,7 @@ function reloadData() {
   captureQueue = getData('captureQueue', []);
   groceryList = getData('groceryList', []);
   groceryStores = getData('groceryStores', ['Aldi', 'Kroger', 'WalMart', "Sam's Club"]);
+  claudeInbox = getData('claudeInbox', []);
   renderAll();
 }
 
@@ -830,7 +859,7 @@ function reloadData() {
 
 // ===== NAVIGATION =====
 let currentPage = 'home';
-const pageTitles = { home:'Mobile Command', quickadd:'Quick Add', queue:'Queue', tasks:'Tasks', wtd:'Win The Day', groceries:'Grocery List', mortgage:'Mortgage Calc' };
+const pageTitles = { home:'Mobile Command', quickadd:'Quick Add', queue:'Queue', tasks:'Tasks', wtd:'Win The Day', groceries:'Grocery List', mortgage:'Mortgage Calc', claude:'Notes to Claude' };
 
 function goTo(page) {
   currentPage = page;
@@ -842,6 +871,7 @@ function goTo(page) {
   else if (page === 'tasks') renderTasks();
   else if (page === 'wtd') renderWtd();
   else if (page === 'groceries') renderMobileGroceries();
+  else if (page === 'claude') { renderClaudeInbox(); setTimeout(() => { const el = document.getElementById('claudeInput'); if (el) el.focus(); }, 100); }
   else if (page === 'home') updateHomeCounts();
 }
 
@@ -849,8 +879,8 @@ function goHome() { goTo('home'); }
 
 // ===== HOME COUNTS =====
 function updateHomeCounts() {
-  const qCount = captureQueue.filter(i => !i.done).length;
-  document.getElementById('homeQueueCount').textContent = qCount + ' item' + (qCount !== 1 ? 's' : '');
+  const qCount = captureQueue.filter(i => !i.done && i.category === 'todo').length;
+  document.getElementById('homeQueueCount').textContent = qCount + ' to-do' + (qCount !== 1 ? 's' : '');
   const tOpen = tasks.filter(t => !t.done).length;
   document.getElementById('homeTaskCount').textContent = tOpen + ' open';
   const score = getWtdScore();
@@ -858,6 +888,10 @@ function updateHomeCounts() {
   const gCount = groceryList.filter(g => !g.checked).length;
   const el = document.getElementById('homeGrocCount');
   if (el) el.textContent = gCount + ' item' + (gCount !== 1 ? 's' : '');
+  // Notes to Claude: count items Scott has captured but Claude hasn't addressed yet.
+  const cCount = (claudeInbox || []).filter(n => !n.addressed).length;
+  const cEl = document.getElementById('homeClaudeCount');
+  if (cEl) cEl.textContent = cCount + ' pending';
 }
 
 // ===== QUICK ADD =====
@@ -921,6 +955,106 @@ function startVoice() {
   };
   recognition.start();
 }
+
+// ===== NOTES TO CLAUDE =====
+// Separate capture pipeline from the queue. Items are messages Scott wants
+// Claude to see in their next session — not tasks/groceries/ideas. Lives in
+// data/claudeInbox in Firebase.
+function sendToClaude() {
+  const input = document.getElementById('claudeInput');
+  const text = input.value.trim();
+  if (!text) return;
+  claudeInbox.push({
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    text: text,
+    source: 'mobile',
+    created: TODAY,
+    createdTime: new Date().toTimeString().slice(0,5),
+    addressed: false
+  });
+  setData('claudeInbox', claudeInbox);
+  input.value = '';
+  showToast('Sent to Claude');
+  renderClaudeInbox();
+  updateHomeCounts();
+}
+
+let claudeRecognition = null;
+function startClaudeVoice() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) { showToast('Voice not supported'); return; }
+  const btn = document.getElementById('claudeMicBtn');
+  if (claudeRecognition) { claudeRecognition.stop(); return; }
+  claudeRecognition = new SpeechRecognition();
+  claudeRecognition.continuous = false;
+  claudeRecognition.interimResults = true;
+  claudeRecognition.lang = 'en-US';
+  btn.classList.add('recording');
+  document.getElementById('claudeMicLabel').textContent = 'Listening...';
+  document.getElementById('claudeMicLabel').style.color = 'var(--red)';
+  claudeRecognition.onresult = function(e) {
+    let transcript = '';
+    for (let i = 0; i < e.results.length; i++) transcript += e.results[i][0].transcript;
+    document.getElementById('claudeInput').value = transcript;
+  };
+  claudeRecognition.onend = function() {
+    btn.classList.remove('recording'); claudeRecognition = null;
+    document.getElementById('claudeMicLabel').textContent = 'Tap to speak';
+    document.getElementById('claudeMicLabel').style.color = '';
+  };
+  claudeRecognition.onerror = function() {
+    btn.classList.remove('recording'); claudeRecognition = null;
+    document.getElementById('claudeMicLabel').textContent = 'Tap to speak';
+    document.getElementById('claudeMicLabel').style.color = '';
+    showToast('Voice error');
+  };
+  claudeRecognition.start();
+}
+
+function renderClaudeInbox() {
+  const wrap = document.getElementById('claudeInboxList');
+  if (!wrap) return;
+  const pending = (claudeInbox || []).filter(n => !n.addressed).slice().sort((a, b) => (b.id || 0) - (a.id || 0));
+  if (pending.length === 0) {
+    wrap.innerHTML = '<div style="text-align:center;color:var(--text-dim);font-size:12px;padding:14px">No pending notes. New ones will appear here.</div>';
+    return;
+  }
+  let html = '<div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Pending — ' + pending.length + '</div>';
+  pending.forEach(n => {
+    const when = (n.created || '') + (n.createdTime ? ' · ' + n.createdTime : '');
+    const src = n.source ? ' · ' + n.source : '';
+    html += '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px">' +
+      '<div style="font-size:14px;color:var(--text);white-space:pre-wrap;word-break:break-word">' + escapeHtml(n.text) + '</div>' +
+      '<div style="font-size:10px;color:var(--text-dim);margin-top:6px">' + escapeHtml(when + src) + '</div>' +
+      '<div style="text-align:right;margin-top:6px">' +
+        '<button onclick="claudeMarkAddressed(' + n.id + ')" style="background:transparent;color:var(--text-dim);border:1px solid var(--border);padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer">Mark addressed</button>' +
+      '</div>' +
+    '</div>';
+  });
+  wrap.innerHTML = html;
+}
+
+function claudeMarkAddressed(id) {
+  const note = claudeInbox.find(n => n.id === id);
+  if (!note) return;
+  note.addressed = true;
+  note.addressedAt = new Date().toISOString();
+  setData('claudeInbox', claudeInbox);
+  renderClaudeInbox();
+  updateHomeCounts();
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// Enter key on claude input: Shift+Enter for newline, Enter to send
+(function bindClaudeEnter() {
+  const el = document.getElementById('claudeInput');
+  if (el) el.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendToClaude(); }
+  });
+})();
 
 // ===== QUEUE =====
 let pendingDeleteId = null;
@@ -1668,6 +1802,7 @@ function renderAll() {
   if (currentPage === 'tasks') renderTasks();
   if (currentPage === 'wtd') renderWtd();
   if (currentPage === 'groceries') renderMobileGroceries();
+  if (currentPage === 'claude') renderClaudeInbox();
 }
 renderAll();
 

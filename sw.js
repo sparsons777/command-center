@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cc-v13-20260512-anonguard';
+const CACHE_NAME = 'cc-v14-20260512-claudeinbox';
 const ASSETS = [
   './index.html',
   './manifest.json',

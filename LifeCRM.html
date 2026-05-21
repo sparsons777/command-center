@@ -1964,6 +1964,7 @@ function ico(name, size, color) {
   <div class="nav-item" data-page="tasks"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="#34a853" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>Tasks<span class="badge" id="navTaskBadge" style="display:none">0</span></div>
   <div class="nav-item" data-page="frog"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="#34a853" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="13" rx="9" ry="7"/><circle cx="7.5" cy="7" r="2.5"/><circle cx="16.5" cy="7" r="2.5"/><circle cx="7.5" cy="7" r="1" fill="#34a853"/><circle cx="16.5" cy="7" r="1" fill="#34a853"/><path d="M8 16c1.5 1.5 6.5 1.5 8 0"/></svg></span>Eat the Frog</div>
   <div class="nav-item" data-page="queue"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="#e8710a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></span>Capture Queue<span class="badge" id="navQueueBadge" style="display:none;background:var(--orange)">0</span></div>
+  <div class="nav-item" data-page="claudeinbox"><span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>Notes to Claude<span class="badge" id="navClaudeBadge" style="display:none;background:#a855f7">0</span></div>
   </div></div>
 
   <div class="nav-section" data-section="business">
@@ -2474,6 +2475,35 @@ function ico(name, size, color) {
           <button class="btn btn-orange" onclick="saveFrog()">Set Frog</button>
         </div>
         <div class="saved-msg" id="frogSaved"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== NOTES TO CLAUDE INBOX PAGE ========== -->
+<div class="page" id="page-claudeinbox">
+  <div class="page-header"><span class="icon" style="display:inline-block;width:22px;height:22px;vertical-align:middle"><svg viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>Notes to Claude</div>
+  <div class="page-sub">Anything you want Claude to see at the start of your next session. Capture on mobile or here — both sync. Mark addressed once Claude has acted on it.</div>
+  <div class="row">
+    <div class="col-grow">
+      <div class="panel">
+        <div style="margin-bottom:14px">
+          <textarea id="claudeInputDesktop" class="input-field" rows="4" placeholder="Type a note for Claude..." style="width:100%;padding:10px;font-size:14px;box-sizing:border-box"></textarea>
+          <div style="display:flex;gap:8px;margin-top:8px;justify-content:flex-end">
+            <button class="btn" onclick="document.getElementById('claudeInputDesktop').value=''">Clear</button>
+            <button class="btn btn-primary" onclick="sendToClaudeDesktop()">Send</button>
+          </div>
+        </div>
+        <div style="border-top:1px solid var(--glass-border);padding-top:14px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim)">Inbox</div>
+            <div style="display:flex;gap:4px">
+              <button class="btn" id="claudeFilterPending" onclick="setClaudeFilter('pending')" style="font-size:11px;padding:4px 10px">Pending</button>
+              <button class="btn" id="claudeFilterAll" onclick="setClaudeFilter('all')" style="font-size:11px;padding:4px 10px">All</button>
+            </div>
+          </div>
+          <div id="claudeInboxListDesktop"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -4412,6 +4442,7 @@ function reloadAllData() {
   gratitudeLog = getData('gratitudeLog', {});
   captureQueue = getData('captureQueue', []);
   researchCategories = getData('researchCategories', DEFAULT_RESEARCH_CATS);
+  claudeInbox = getData('claudeInbox', []);
   renderAll();
   loadFormFields();
   renderJournal();
@@ -4443,6 +4474,8 @@ function renderAll() {
   safe('renderResearch', renderResearch);
   safe('renderBizIdeas', renderBizIdeas);
   safe('renderQueue', renderQueue);
+  safe('renderClaudeInbox', renderClaudeInbox);
+  safe('updateClaudeBadge', updateClaudeBadge);
   safe('updateDashboard', updateDashboard);
   safe('updateBadges', updateBadges);
   safe('renderHotButtons-final', renderHotButtons);
@@ -4472,6 +4505,10 @@ function navigate(page) {
   if (navItem) navItem.classList.add('active');
   window.scrollTo(0, 0);
   if (page === 'whiteboard') { setTimeout(() => renderScoreboard(), 50); }
+  if (page === 'claudeinbox') {
+    if (typeof renderClaudeInbox === 'function') renderClaudeInbox();
+    setTimeout(() => { const el = document.getElementById('claudeInputDesktop'); if (el) el.focus(); }, 80);
+  }
   // Persist current page so refresh stays here
   try { localStorage.setItem('_currentPage', page); } catch(e) {}
 }
@@ -15610,6 +15647,131 @@ function renderResearch() {
     </div>`;
   }).join('');
 }
+
+// ===== NOTES TO CLAUDE INBOX =====
+// Scott captures notes (mobile or desktop) → stored in data/claudeInbox.
+// At the start of a chat session, Claude can read these. Scott marks addressed
+// once Claude has acted on them.
+let claudeInbox = getData('claudeInbox', []);
+let claudeFilter = 'pending'; // 'pending' | 'all'
+
+function sendToClaudeDesktop() {
+  const input = document.getElementById('claudeInputDesktop');
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+  claudeInbox.push({
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    text: text,
+    source: 'desktop',
+    created: TODAY,
+    createdTime: new Date().toTimeString().slice(0,5),
+    addressed: false
+  });
+  setData('claudeInbox', claudeInbox);
+  input.value = '';
+  renderClaudeInbox();
+  updateClaudeBadge();
+}
+
+function setClaudeFilter(f) {
+  claudeFilter = f;
+  renderClaudeInbox();
+}
+
+function markClaudeAddressed(id) {
+  const note = claudeInbox.find(n => n.id === id);
+  if (!note) return;
+  note.addressed = true;
+  note.addressedAt = new Date().toISOString();
+  setData('claudeInbox', claudeInbox);
+  renderClaudeInbox();
+  updateClaudeBadge();
+}
+
+function markClaudeUnaddressed(id) {
+  const note = claudeInbox.find(n => n.id === id);
+  if (!note) return;
+  note.addressed = false;
+  delete note.addressedAt;
+  setData('claudeInbox', claudeInbox);
+  renderClaudeInbox();
+  updateClaudeBadge();
+}
+
+function deleteClaudeNote(id) {
+  if (!confirm('Delete this note? This cannot be undone.')) return;
+  claudeInbox = claudeInbox.filter(n => n.id !== id);
+  setData('claudeInbox', claudeInbox);
+  renderClaudeInbox();
+  updateClaudeBadge();
+}
+
+function renderClaudeInbox() {
+  const list = document.getElementById('claudeInboxListDesktop');
+  if (!list) return;
+  // Update filter button states
+  const pendBtn = document.getElementById('claudeFilterPending');
+  const allBtn = document.getElementById('claudeFilterAll');
+  if (pendBtn) pendBtn.classList.toggle('btn-primary', claudeFilter === 'pending');
+  if (allBtn) allBtn.classList.toggle('btn-primary', claudeFilter === 'all');
+
+  const items = (claudeInbox || []).slice().sort((a, b) => (b.id || 0) - (a.id || 0));
+  const filtered = claudeFilter === 'pending' ? items.filter(n => !n.addressed) : items;
+  if (filtered.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:24px;font-size:13px">' +
+      (claudeFilter === 'pending' ? 'No pending notes. Capture one above or from your phone.' : 'No notes captured yet.') +
+      '</div>';
+    return;
+  }
+  let html = '';
+  filtered.forEach(n => {
+    const when = (n.created || '') + (n.createdTime ? ' · ' + n.createdTime : '');
+    const src = n.source ? ' · ' + n.source : '';
+    const addressed = !!n.addressed;
+    const borderColor = addressed ? 'var(--glass-border)' : '#a855f7';
+    const opacity = addressed ? '0.55' : '1';
+    html += '<div style="background:var(--card);border:1px solid ' + borderColor + ';border-radius:10px;padding:12px 14px;margin-bottom:10px;opacity:' + opacity + '">';
+    html += '<div style="font-size:14px;color:var(--text);white-space:pre-wrap;word-break:break-word">' + escapeClaudeHtml(n.text) + '</div>';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">';
+    html +=   '<div style="font-size:11px;color:var(--text-dim)">' + escapeClaudeHtml(when + src) + (addressed ? ' · addressed' : '') + '</div>';
+    html +=   '<div style="display:flex;gap:6px">';
+    if (addressed) {
+      html +=   '<button class="btn" onclick="markClaudeUnaddressed(' + n.id + ')" style="font-size:11px;padding:4px 10px">Unmark</button>';
+    } else {
+      html +=   '<button class="btn" onclick="markClaudeAddressed(' + n.id + ')" style="font-size:11px;padding:4px 10px;background:#a855f7;color:#fff;border:0">Mark addressed</button>';
+    }
+    html +=     '<button class="btn" onclick="deleteClaudeNote(' + n.id + ')" style="font-size:11px;padding:4px 10px">Delete</button>';
+    html +=   '</div>';
+    html += '</div>';
+    html += '</div>';
+  });
+  list.innerHTML = html;
+}
+
+function updateClaudeBadge() {
+  const navBadge = document.getElementById('navClaudeBadge');
+  if (!navBadge) return;
+  const pending = (claudeInbox || []).filter(n => !n.addressed).length;
+  navBadge.textContent = pending;
+  navBadge.style.display = pending > 0 ? '' : 'none';
+}
+
+function escapeClaudeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// Enter sends, Shift+Enter newline
+(function bindClaudeEnterDesktop() {
+  function bind() {
+    const el = document.getElementById('claudeInputDesktop');
+    if (!el) { setTimeout(bind, 100); return; }
+    el.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendToClaudeDesktop(); }
+    });
+  }
+  bind();
+})();
 
 // ===== RESEARCH CATEGORY MANAGEMENT =====
 const DEFAULT_RESEARCH_CATS = ['General', 'Technology', 'Finance', 'Health', 'Business', 'Science', 'Personal', 'Groceries', 'Wish List', 'Other'];
