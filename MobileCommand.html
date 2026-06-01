@@ -888,8 +888,12 @@ function updateHomeCounts() {
   const gCount = groceryList.filter(g => !g.checked).length;
   const el = document.getElementById('homeGrocCount');
   if (el) el.textContent = gCount + ' item' + (gCount !== 1 ? 's' : '');
-  // Notes to Claude: count items Scott has captured but Claude hasn't addressed yet.
-  const cCount = (claudeInbox || []).filter(n => !n.addressed).length;
+  // Notes to Claude: count active items (not addressed AND not currently snoozed).
+  const cCount = (claudeInbox || []).filter(n => {
+    if (n.addressed) return false;
+    if (n.snoozeUntil && new Date(n.snoozeUntil) > new Date()) return false;
+    return true;
+  }).length;
   const cEl = document.getElementById('homeClaudeCount');
   if (cEl) cEl.textContent = cCount + ' pending';
 }
@@ -1014,22 +1018,42 @@ function startClaudeVoice() {
 function renderClaudeInbox() {
   const wrap = document.getElementById('claudeInboxList');
   if (!wrap) return;
-  const pending = (claudeInbox || []).filter(n => !n.addressed).slice().sort((a, b) => (b.id || 0) - (a.id || 0));
-  if (pending.length === 0) {
+  const PRIO_COLORS = { low: '#64748b', med: '#f59e0b', high: '#dc2626' };
+  // Active = not addressed and not currently snoozed
+  const active = (claudeInbox || []).filter(n => {
+    if (n.addressed) return false;
+    if (n.snoozeUntil && new Date(n.snoozeUntil) > new Date()) return false;
+    return true;
+  }).slice().sort((a, b) => {
+    if ((b.forDiscussion ? 1 : 0) !== (a.forDiscussion ? 1 : 0)) return (b.forDiscussion ? 1 : 0) - (a.forDiscussion ? 1 : 0);
+    const rank = { high: 3, med: 2, low: 1, '': 0 };
+    if (rank[b.priority || ''] !== rank[a.priority || '']) return rank[b.priority || ''] - rank[a.priority || ''];
+    return (b.id || 0) - (a.id || 0);
+  });
+  if (active.length === 0) {
     wrap.innerHTML = '<div style="text-align:center;color:var(--text-dim);font-size:12px;padding:14px">No pending notes. New ones will appear here.</div>';
     return;
   }
-  let html = '<div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Pending — ' + pending.length + '</div>';
-  pending.forEach(n => {
+  let html = '<div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Pending — ' + active.length + '</div>';
+  active.forEach(n => {
     const when = (n.created || '') + (n.createdTime ? ' · ' + n.createdTime : '');
     const src = n.source ? ' · ' + n.source : '';
-    html += '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px">' +
-      '<div style="font-size:14px;color:var(--text);white-space:pre-wrap;word-break:break-word">' + escapeHtml(n.text) + '</div>' +
-      '<div style="font-size:10px;color:var(--text-dim);margin-top:6px">' + escapeHtml(when + src) + '</div>' +
-      '<div style="text-align:right;margin-top:6px">' +
-        '<button onclick="claudeMarkAddressed(' + n.id + ')" style="background:transparent;color:var(--text-dim);border:1px solid var(--border);padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer">Mark addressed</button>' +
-      '</div>' +
-    '</div>';
+    const disc = !!n.forDiscussion;
+    const prio = n.priority || '';
+    const borderColor = disc ? '#06b6d4' : prio === 'high' ? '#dc2626' : 'var(--border)';
+    html += '<div style="background:var(--bg2);border:1px solid ' + borderColor + ';border-radius:8px;padding:10px;margin-bottom:8px">';
+    // Chips row (read-only on mobile — full triage is on desktop)
+    let chips = '';
+    if (prio) chips += '<span style="background:' + PRIO_COLORS[prio] + ';color:#fff;font-size:9px;padding:2px 6px;border-radius:3px;font-weight:700;letter-spacing:0.5px;margin-right:4px">' + prio.toUpperCase() + '</span>';
+    if (disc) chips += '<span style="background:#06b6d4;color:#fff;font-size:9px;padding:2px 6px;border-radius:3px;font-weight:700;margin-right:4px">★ DISCUSS</span>';
+    if (n.tag) chips += '<span style="background:var(--bg3);color:var(--text);font-size:9px;padding:2px 6px;border-radius:3px;margin-right:4px">#' + escapeHtml(n.tag) + '</span>';
+    if (chips) html += '<div style="margin-bottom:6px">' + chips + '</div>';
+    html += '<div style="font-size:14px;color:var(--text);white-space:pre-wrap;word-break:break-word">' + escapeHtml(n.text) + '</div>';
+    html += '<div style="font-size:10px;color:var(--text-dim);margin-top:6px">' + escapeHtml(when + src) + '</div>';
+    html += '<div style="text-align:right;margin-top:6px">';
+    html +=   '<button onclick="claudeMarkAddressed(' + n.id + ')" style="background:transparent;color:var(--text-dim);border:1px solid var(--border);padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer">Mark addressed</button>';
+    html += '</div>';
+    html += '</div>';
   });
   wrap.innerHTML = html;
 }

@@ -2,7 +2,7 @@
 // Bumping CACHE_NAME triggers an SW update; MobileCommand.html's update detector
 // auto-reloads the page once the new SW takes control. End result: pushing new
 // code reaches the phone on the next refresh — no clear-data-and-reinstall.
-const CACHE_NAME = 'mobile-command-v12-20260512-claudeinbox';
+const CACHE_NAME = 'mobile-command-v13-20260601-triage';
 
 // Pre-cache only assets that genuinely don't change often. HTML is intentionally
 // excluded so it always tries network first (and falls back to cache offline).

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cc-v14-20260512-claudeinbox';
+const CACHE_NAME = 'cc-v15-20260601-triage';
 const ASSETS = [
   './index.html',
   './manifest.json',

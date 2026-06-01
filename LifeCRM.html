@@ -2495,13 +2495,28 @@ function ico(name, size, color) {
           </div>
         </div>
         <div style="border-top:1px solid var(--glass-border);padding-top:14px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
             <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim)">Inbox</div>
-            <div style="display:flex;gap:4px">
+            <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">
               <button class="btn" id="claudeFilterPending" onclick="setClaudeFilter('pending')" style="font-size:11px;padding:4px 10px">Pending</button>
+              <button class="btn" id="claudeFilterHigh" onclick="setClaudeFilter('high')" style="font-size:11px;padding:4px 10px">High</button>
+              <button class="btn" id="claudeFilterDiscussion" onclick="setClaudeFilter('discussion')" style="font-size:11px;padding:4px 10px">Discuss</button>
+              <button class="btn" id="claudeFilterSnoozed" onclick="setClaudeFilter('snoozed')" style="font-size:11px;padding:4px 10px">Snoozed</button>
               <button class="btn" id="claudeFilterAll" onclick="setClaudeFilter('all')" style="font-size:11px;padding:4px 10px">All</button>
+              <input type="text" id="claudeTagFilter" placeholder="filter by tag…" list="claudeTagSuggestions" oninput="setClaudeTagFilter(this.value)" style="background:var(--bg2);color:var(--text);border:1px solid var(--glass-border);padding:4px 8px;border-radius:4px;font-size:11px;width:130px;margin-left:6px">
             </div>
           </div>
+          <datalist id="claudeTagSuggestions">
+            <option value="build">
+            <option value="goals">
+            <option value="finance">
+            <option value="agent-arch">
+            <option value="ux">
+            <option value="grocery">
+            <option value="task">
+            <option value="idea">
+            <option value="reflection">
+          </datalist>
           <div id="claudeInboxListDesktop"></div>
         </div>
       </div>
@@ -15650,10 +15665,27 @@ function renderResearch() {
 
 // ===== NOTES TO CLAUDE INBOX =====
 // Scott captures notes (mobile or desktop) → stored in data/claudeInbox.
-// At the start of a chat session, Claude can read these. Scott marks addressed
-// once Claude has acted on them.
+// Each note now carries triage fields: tag, priority, forDiscussion, snoozeUntil.
+// Notes are addressed/deleted from here. Snoozed notes are hidden until snoozeUntil.
 let claudeInbox = getData('claudeInbox', []);
-let claudeFilter = 'pending'; // 'pending' | 'all'
+let claudeFilter = 'pending'; // 'pending' | 'all' | 'discussion' | 'snoozed' | 'high'
+let claudeTagFilter = ''; // free-text tag filter; empty = no tag filter
+
+// Quick tag suggestions for autocomplete-like behavior
+const CLAUDE_TAG_SUGGESTIONS = ['build', 'goals', 'finance', 'agent-arch', 'ux', 'grocery', 'task', 'idea', 'reflection'];
+const CLAUDE_PRIORITY_CYCLE = ['', 'low', 'med', 'high'];
+const CLAUDE_PRIORITY_COLORS = { low: '#64748b', med: '#f59e0b', high: '#dc2626' };
+
+function _claudeIsActive(n) {
+  // "Active" = not addressed and not currently snoozed.
+  if (n.addressed) return false;
+  if (n.snoozeUntil) {
+    const now = new Date();
+    const until = new Date(n.snoozeUntil);
+    if (until > now) return false;
+  }
+  return true;
+}
 
 function sendToClaudeDesktop() {
   const input = document.getElementById('claudeInputDesktop');
@@ -15666,7 +15698,11 @@ function sendToClaudeDesktop() {
     source: 'desktop',
     created: TODAY,
     createdTime: new Date().toTimeString().slice(0,5),
-    addressed: false
+    addressed: false,
+    tag: '',
+    priority: '',
+    forDiscussion: false,
+    snoozeUntil: null
   });
   setData('claudeInbox', claudeInbox);
   input.value = '';
@@ -15676,6 +15712,11 @@ function sendToClaudeDesktop() {
 
 function setClaudeFilter(f) {
   claudeFilter = f;
+  renderClaudeInbox();
+}
+
+function setClaudeTagFilter(t) {
+  claudeTagFilter = (t || '').trim().toLowerCase();
   renderClaudeInbox();
 }
 
@@ -15707,43 +15748,155 @@ function deleteClaudeNote(id) {
   updateClaudeBadge();
 }
 
+function setClaudeNoteTag(id, val) {
+  const note = claudeInbox.find(n => n.id === id);
+  if (!note) return;
+  note.tag = (val || '').trim().toLowerCase();
+  setData('claudeInbox', claudeInbox);
+  renderClaudeInbox();
+}
+
+function cycleClaudePriority(id) {
+  const note = claudeInbox.find(n => n.id === id);
+  if (!note) return;
+  const cur = note.priority || '';
+  const idx = CLAUDE_PRIORITY_CYCLE.indexOf(cur);
+  note.priority = CLAUDE_PRIORITY_CYCLE[(idx + 1) % CLAUDE_PRIORITY_CYCLE.length];
+  setData('claudeInbox', claudeInbox);
+  renderClaudeInbox();
+}
+
+function toggleClaudeDiscussion(id) {
+  const note = claudeInbox.find(n => n.id === id);
+  if (!note) return;
+  note.forDiscussion = !note.forDiscussion;
+  setData('claudeInbox', claudeInbox);
+  renderClaudeInbox();
+}
+
+function snoozeClaudeNote(id, days) {
+  const note = claudeInbox.find(n => n.id === id);
+  if (!note) return;
+  const until = new Date();
+  until.setDate(until.getDate() + Number(days));
+  note.snoozeUntil = until.toISOString();
+  setData('claudeInbox', claudeInbox);
+  renderClaudeInbox();
+  updateClaudeBadge();
+}
+
+function unsnoozeClaudeNote(id) {
+  const note = claudeInbox.find(n => n.id === id);
+  if (!note) return;
+  note.snoozeUntil = null;
+  setData('claudeInbox', claudeInbox);
+  renderClaudeInbox();
+  updateClaudeBadge();
+}
+
 function renderClaudeInbox() {
   const list = document.getElementById('claudeInboxListDesktop');
   if (!list) return;
-  // Update filter button states
-  const pendBtn = document.getElementById('claudeFilterPending');
-  const allBtn = document.getElementById('claudeFilterAll');
-  if (pendBtn) pendBtn.classList.toggle('btn-primary', claudeFilter === 'pending');
-  if (allBtn) allBtn.classList.toggle('btn-primary', claudeFilter === 'all');
 
-  const items = (claudeInbox || []).slice().sort((a, b) => (b.id || 0) - (a.id || 0));
-  const filtered = claudeFilter === 'pending' ? items.filter(n => !n.addressed) : items;
+  // Disposition pill states
+  ['Pending', 'All', 'Discussion', 'Snoozed', 'High'].forEach(label => {
+    const btn = document.getElementById('claudeFilter' + label);
+    if (btn) btn.classList.toggle('btn-primary', claudeFilter === label.toLowerCase());
+  });
+  const tagInput = document.getElementById('claudeTagFilter');
+  if (tagInput && tagInput.value.toLowerCase() !== claudeTagFilter) tagInput.value = claudeTagFilter;
+
+  // Sort: forDiscussion first, then by priority (high > med > low > none), then newest
+  const priorityRank = { high: 3, med: 2, low: 1, '': 0 };
+  const items = (claudeInbox || []).slice().sort((a, b) => {
+    if ((b.forDiscussion ? 1 : 0) !== (a.forDiscussion ? 1 : 0)) return (b.forDiscussion ? 1 : 0) - (a.forDiscussion ? 1 : 0);
+    const pa = priorityRank[a.priority || ''] || 0;
+    const pb = priorityRank[b.priority || ''] || 0;
+    if (pa !== pb) return pb - pa;
+    return (b.id || 0) - (a.id || 0);
+  });
+
+  // Apply filters
+  const filtered = items.filter(n => {
+    if (claudeFilter === 'pending') { if (!_claudeIsActive(n)) return false; }
+    else if (claudeFilter === 'discussion') { if (!n.forDiscussion || n.addressed) return false; }
+    else if (claudeFilter === 'snoozed') { if (!n.snoozeUntil || new Date(n.snoozeUntil) <= new Date() || n.addressed) return false; }
+    else if (claudeFilter === 'high') { if (n.priority !== 'high' || !_claudeIsActive(n)) return false; }
+    // 'all' = no disposition filter
+    if (claudeTagFilter && (n.tag || '').toLowerCase().indexOf(claudeTagFilter) === -1) return false;
+    return true;
+  });
+
   if (filtered.length === 0) {
     list.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:24px;font-size:13px">' +
-      (claudeFilter === 'pending' ? 'No pending notes. Capture one above or from your phone.' : 'No notes captured yet.') +
+      (claudeFilter === 'pending' ? 'No active notes. Capture one above or from your phone.' :
+       claudeFilter === 'discussion' ? 'No notes flagged for discussion.' :
+       claudeFilter === 'snoozed' ? 'No snoozed notes.' :
+       claudeFilter === 'high' ? 'No high-priority notes.' :
+       'No notes match the filter.') +
       '</div>';
     return;
   }
+
   let html = '';
   filtered.forEach(n => {
     const when = (n.created || '') + (n.createdTime ? ' · ' + n.createdTime : '');
     const src = n.source ? ' · ' + n.source : '';
     const addressed = !!n.addressed;
-    const borderColor = addressed ? 'var(--glass-border)' : '#a855f7';
-    const opacity = addressed ? '0.55' : '1';
+    const snoozed = n.snoozeUntil && new Date(n.snoozeUntil) > new Date();
+    const disc = !!n.forDiscussion;
+    const prio = n.priority || '';
+    const borderColor = addressed ? 'var(--glass-border)' :
+                        disc ? '#06b6d4' :
+                        prio === 'high' ? '#dc2626' :
+                        snoozed ? '#64748b' :
+                        '#a855f7';
+    const opacity = (addressed || snoozed) ? '0.65' : '1';
+
     html += '<div style="background:var(--card);border:1px solid ' + borderColor + ';border-radius:10px;padding:12px 14px;margin-bottom:10px;opacity:' + opacity + '">';
-    html += '<div style="font-size:14px;color:var(--text);white-space:pre-wrap;word-break:break-word">' + escapeClaudeHtml(n.text) + '</div>';
-    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">';
-    html +=   '<div style="font-size:11px;color:var(--text-dim)">' + escapeClaudeHtml(when + src) + (addressed ? ' · addressed' : '') + '</div>';
-    html +=   '<div style="display:flex;gap:6px">';
-    if (addressed) {
-      html +=   '<button class="btn" onclick="markClaudeUnaddressed(' + n.id + ')" style="font-size:11px;padding:4px 10px">Unmark</button>';
-    } else {
-      html +=   '<button class="btn" onclick="markClaudeAddressed(' + n.id + ')" style="font-size:11px;padding:4px 10px;background:#a855f7;color:#fff;border:0">Mark addressed</button>';
+
+    // Top row: priority pill, discussion star, tag input
+    html += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap">';
+    // Priority button
+    const prioLabel = prio ? prio.toUpperCase() : '—';
+    const prioBg = prio ? CLAUDE_PRIORITY_COLORS[prio] : 'transparent';
+    const prioColor = prio ? '#fff' : 'var(--text-dim)';
+    const prioBorder = prio ? CLAUDE_PRIORITY_COLORS[prio] : 'var(--glass-border)';
+    html += '<button onclick="cycleClaudePriority(' + n.id + ')" title="Click to cycle priority" style="background:' + prioBg + ';color:' + prioColor + ';border:1px solid ' + prioBorder + ';font-size:10px;padding:3px 8px;border-radius:4px;cursor:pointer;font-weight:700;letter-spacing:0.5px;min-width:50px">' + prioLabel + '</button>';
+    // Discussion star
+    html += '<button onclick="toggleClaudeDiscussion(' + n.id + ')" title="Flag for our next discussion" style="background:' + (disc ? '#06b6d4' : 'transparent') + ';color:' + (disc ? '#fff' : 'var(--text-dim)') + ';border:1px solid ' + (disc ? '#06b6d4' : 'var(--glass-border)') + ';font-size:11px;padding:3px 8px;border-radius:4px;cursor:pointer;font-weight:600">' + (disc ? '★ Discuss' : '☆ Discuss') + '</button>';
+    // Tag input
+    html += '<input type="text" value="' + escapeClaudeHtml(n.tag || '') + '" placeholder="+ tag" list="claudeTagSuggestions" onchange="setClaudeNoteTag(' + n.id + ', this.value)" style="background:var(--bg2);color:var(--text);border:1px solid var(--glass-border);padding:3px 8px;border-radius:4px;font-size:11px;width:120px">';
+    // Snoozed indicator
+    if (snoozed) {
+      const days = Math.ceil((new Date(n.snoozeUntil) - new Date()) / 86400000);
+      html += '<span style="font-size:11px;color:var(--text-dim);padding:3px 6px;background:var(--bg2);border-radius:4px">💤 ' + days + 'd</span>';
     }
-    html +=     '<button class="btn" onclick="deleteClaudeNote(' + n.id + ')" style="font-size:11px;padding:4px 10px">Delete</button>';
+    html += '</div>';
+
+    // Note text
+    html += '<div style="font-size:14px;color:var(--text);white-space:pre-wrap;word-break:break-word">' + escapeClaudeHtml(n.text) + '</div>';
+
+    // Bottom row: metadata + actions
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;flex-wrap:wrap;gap:6px">';
+    html +=   '<div style="font-size:11px;color:var(--text-dim)">' + escapeClaudeHtml(when + src) + (addressed ? ' · addressed' : '') + '</div>';
+    html +=   '<div style="display:flex;gap:6px;flex-wrap:wrap">';
+    if (snoozed) {
+      html += '<button class="btn" onclick="unsnoozeClaudeNote(' + n.id + ')" style="font-size:11px;padding:4px 10px">Wake up</button>';
+    } else if (!addressed) {
+      html += '<select onchange="if(this.value){snoozeClaudeNote(' + n.id + ', this.value);this.value=\'\';}" style="background:var(--bg2);color:var(--text);border:1px solid var(--glass-border);padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer">' +
+              '<option value="">Snooze ▾</option><option value="1">1 day</option><option value="3">3 days</option><option value="7">1 week</option><option value="14">2 weeks</option><option value="30">1 month</option>' +
+              '</select>';
+    }
+    if (addressed) {
+      html += '<button class="btn" onclick="markClaudeUnaddressed(' + n.id + ')" style="font-size:11px;padding:4px 10px">Unmark</button>';
+    } else {
+      html += '<button class="btn" onclick="markClaudeAddressed(' + n.id + ')" style="font-size:11px;padding:4px 10px;background:#a855f7;color:#fff;border:0">Mark addressed</button>';
+    }
+    html += '<button class="btn" onclick="deleteClaudeNote(' + n.id + ')" style="font-size:11px;padding:4px 10px">Delete</button>';
     html +=   '</div>';
     html += '</div>';
+
     html += '</div>';
   });
   list.innerHTML = html;
@@ -15752,9 +15905,10 @@ function renderClaudeInbox() {
 function updateClaudeBadge() {
   const navBadge = document.getElementById('navClaudeBadge');
   if (!navBadge) return;
-  const pending = (claudeInbox || []).filter(n => !n.addressed).length;
-  navBadge.textContent = pending;
-  navBadge.style.display = pending > 0 ? '' : 'none';
+  // Active = not addressed AND not currently snoozed.
+  const active = (claudeInbox || []).filter(n => _claudeIsActive(n)).length;
+  navBadge.textContent = active;
+  navBadge.style.display = active > 0 ? '' : 'none';
 }
 
 function escapeClaudeHtml(s) {
